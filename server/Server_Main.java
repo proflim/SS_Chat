@@ -26,7 +26,7 @@ public class Server_Main extends JFrame implements ActionListener{
 	}
 
 	public Server_Main() {
-		setTitle("Server");
+		setTitle("SSChat Server");
 		setSize(800, 500);
 		setVisible(true); // It is necessary to show the frame here!
 
@@ -41,16 +41,20 @@ public class Server_Main extends JFrame implements ActionListener{
 		JLabel Label_ChatWindow = new JLabel("Chat Window");
 		
 		JPanel Panel_CurrentUserList = new JPanel();
-		Panel_CurrentUserList.setPreferredSize(new Dimension(300, 300));
+		Panel_CurrentUserList.setPreferredSize(new Dimension(200, 300));
 		Panel_CurrentUserList.setLayout(new BorderLayout());
 		Panel_CurrentUserList.add(Label_OnlineUsers, BorderLayout.NORTH);
-		//Panel_CurrentUserList.add(@@@@, BorderLayout.CENTER);
+		JScrollPane scrollPane = new JScrollPane(Label_ChatWindow);
+		Panel_CurrentUserList.add(scrollPane, BorderLayout.CENTER);
 		
 		JPanel Panel_Chat = new JPanel();
+		Panel_Chat.setPreferredSize(new Dimension(300, 300));
+
 		Panel_Chat.setLayout(new BorderLayout());
 		Panel_Chat.add(Label_ChatWindow, BorderLayout.NORTH);
 		JPanel Panel_Function = new JPanel();
-		
+		Panel_Function.setPreferredSize(new Dimension(300, 100));
+
 		
 		
 		Pane_Top = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, Panel_CurrentUserList, Panel_Chat);
