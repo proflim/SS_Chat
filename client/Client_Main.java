@@ -7,7 +7,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-public class Client extends JFrame {
+public class Client_Main extends JFrame {
   // Text field for receiving radius
   private JTextField jtf = new JTextField();
 
@@ -19,10 +19,10 @@ public class Client extends JFrame {
   private DataInputStream fromServer;
 
   public static void main(String[] args) {
-    new Client();
+    new Client_Main();
   }
 
-  public Client() {
+  public Client_Main() {
     // Panel p to hold the label and text field
     JPanel p = new JPanel();
     p.setLayout(new BorderLayout());
