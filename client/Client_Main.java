@@ -1,5 +1,6 @@
 package client;
 
+import server.About;
 
 import java.io.*;
 import java.net.*;
@@ -9,6 +10,7 @@ import java.awt.event.*;
 
 import javax.swing.*;
 
+import Main.LoginDialog;
 import server.Server_Main;
 
 public class Client_Main extends JFrame implements ActionListener {
@@ -173,7 +175,14 @@ public class Client_Main extends JFrame implements ActionListener {
 		mi.setMnemonic('L');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				int ans = JOptionPane.showConfirmDialog(null, "Do you wish to Logout? \n(This will terminate the server as well)",
+						"Confirm", JOptionPane.YES_NO_OPTION);
+				if (ans == JOptionPane.YES_OPTION){
+					dispose();
+					LoginDialog loginDialog = new LoginDialog();
 
+					return;	
+				}
 			}
 		});
 		
@@ -181,6 +190,10 @@ public class Client_Main extends JFrame implements ActionListener {
 		mi.setMnemonic('E');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				int ans = JOptionPane.showConfirmDialog(null, "Do you wish to Exit completely?",
+						"Confirm", JOptionPane.YES_NO_OPTION);
+				if (ans == JOptionPane.YES_OPTION)
+					System.exit(0);
 
 			}
 		});
@@ -214,7 +227,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		mi.setMnemonic('H');
 		mi.addActionListener(new ActionListener() {	
 			public void actionPerformed(ActionEvent arg0) {
-
+				ClientHowTo c_howto = new ClientHowTo();
 				
 			}
 		});
@@ -223,7 +236,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		mi.addActionListener(new ActionListener() {	
 			public void actionPerformed(ActionEvent arg0) {
 
-				
+				About about = new About();
 			}
 		});
 		

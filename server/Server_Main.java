@@ -3,6 +3,8 @@ package server;
 
 
 
+import Main.LoginDialog;
+
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -15,6 +17,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 
 public class Server_Main extends JFrame implements ActionListener{
   // Text area for displaying contents
@@ -84,7 +87,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		//Chat Panel
 		Panel_Chat.setPreferredSize(new Dimension(300, 300));
 		Panel_Chat.setLayout(new BorderLayout());
-		Panel_Chat.add(new JLabel("Chat Window"), BorderLayout.NORTH);
+		Panel_Chat.add(new JLabel("  Chat Window"), BorderLayout.NORTH);
 		
 		chatArea.setEditable(false);
 		Pane_ChatArea = new JScrollPane(chatArea);
@@ -101,6 +104,8 @@ public class Server_Main extends JFrame implements ActionListener{
 		receiverField.setPreferredSize(new Dimension(90,20));
 		Panel_Function_Top.add(receiverField);
 		Panel_Function_Center.add(new JLabel("Message: "));
+		Border border = BorderFactory.createLineBorder(Color.BLACK);
+		messageArea.setBorder(border);
 		messageArea.setPreferredSize(new Dimension(600,80));
 		Panel_Function_Center.add(messageArea);
 		sendButton.addActionListener(this);
@@ -159,6 +164,10 @@ public class Server_Main extends JFrame implements ActionListener{
 		setVisible(true); 
 
 	}
+	public void actionPerformed(ActionEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
 	
 	JMenuBar createMenuBar() {
 
@@ -173,7 +182,14 @@ public class Server_Main extends JFrame implements ActionListener{
 		mi.setMnemonic('L');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				int ans = JOptionPane.showConfirmDialog(null, "Do you wish to Logout? \n(This will terminate the server as well)",
+						"Confirm", JOptionPane.YES_NO_OPTION);
+				if (ans == JOptionPane.YES_OPTION){
+					dispose();
+					LoginDialog loginDialog = new LoginDialog();
 
+					return;	
+				}
 			}
 		});
 		
@@ -181,6 +197,10 @@ public class Server_Main extends JFrame implements ActionListener{
 		mi.setMnemonic('E');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				int ans = JOptionPane.showConfirmDialog(null, "Do you wish to Exit completely?",
+						"Confirm", JOptionPane.YES_NO_OPTION);
+				if (ans == JOptionPane.YES_OPTION)
+					System.exit(0);
 
 			}
 		});
@@ -193,7 +213,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		mi.setMnemonic('P');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-
+				PortConfig portconfig = new PortConfig();
 			}
 		});
 		
@@ -217,12 +237,11 @@ public class Server_Main extends JFrame implements ActionListener{
 		JMenu Help = (JMenu) menuBar.add(new JMenu("Help"));
 		Help.setMnemonic('H');
 
-		//if user is not admin
 		mi = (JMenuItem) Help.add(new JMenuItem("How to.."));
 		mi.setMnemonic('H');
 		mi.addActionListener(new ActionListener() {	
 			public void actionPerformed(ActionEvent arg0) {
-
+				ServerHowTo s_howto = new ServerHowTo();
 				
 			}
 		});
@@ -230,7 +249,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		mi.setMnemonic('A');
 		mi.addActionListener(new ActionListener() {	
 			public void actionPerformed(ActionEvent arg0) {
-
+				About about = new About();
 				
 			}
 		});
@@ -238,9 +257,6 @@ public class Server_Main extends JFrame implements ActionListener{
 		return menuBar;
 	}
 
-	public void actionPerformed(ActionEvent arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+
   
 }
