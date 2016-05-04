@@ -33,7 +33,7 @@ public class LoginDialog extends JFrame implements ActionListener{
 	private JButton signupButton;
 	
 	public LoginDialog(){
-		setTitle("Log in");
+		setTitle("SSChat Login");
 		
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
@@ -98,10 +98,10 @@ public class LoginDialog extends JFrame implements ActionListener{
 	
 
 	public void actionPerformed(ActionEvent e) {
-		// TODO Auto-generated method stub
+
 		if(e.getSource() == loginButton)
 		{
-			// When the button is clicked, check the user name and password, and try to log the user in
+
 			
 			if (!attemptLogin(userName.getText(), String.valueOf(password.getPassword()))){
 				JOptionPane.showMessageDialog(this, "Incorrect Credentials",
@@ -121,21 +121,7 @@ public class LoginDialog extends JFrame implements ActionListener{
 
 
 	private boolean attemptLogin(String id, String pw) {
-		/*
-		UserController.getInstance().initUserStorage(new UserStorage());
-		User user = UserController.getInstance().getUserFromCredential(id, pw);
-		if (user == null)
-			return false;
-		
-		UserController.getInstance().setCurrentUser(user);
-		ApptController.getInstance().initApptStorage(new ApptStorage());
-		LocationController.getInstance().initLocationStorage(new LocationStorage(user));
-		NotificationController.getInstance().initNotificationStorage(new NotificationStorage(user));
-		InviteController.getInstance().initInviteStorage(new InviteStorage());
-		CalGrid grid = new CalGrid();
-		setVisible( false );
-		return true;
-		*/
+
 		
 		setVisible( false );
 		if(id.equals("server")){
