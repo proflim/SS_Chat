@@ -23,9 +23,7 @@ public class Server_Main extends JFrame implements ActionListener{
   // Text area for displaying contents
 	private JPanel Panel_OnlineUserList = new JPanel();
 	private JPanel Panel_OnlineUserList_Top = new JPanel();
-	
 	private JPanel Panel_Chat = new JPanel();
-	
 	private JPanel Panel_Function = new JPanel();
 	private JPanel Panel_Function_Top = new JPanel();
 	private JPanel Panel_Function_Center = new JPanel();
@@ -53,7 +51,8 @@ public class Server_Main extends JFrame implements ActionListener{
 		setTitle("SSChat Server");
 		setSize(800, 500);
 		setResizable(false);
-
+		setLocation(300,100);
+		
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
 				System.exit(0);
@@ -95,7 +94,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		
 
 		//Function Panel
-		Panel_Function.setPreferredSize(new Dimension(300, 100));
+		Panel_Function.setPreferredSize(new Dimension(300, 90));
 		Panel_Function.setLayout(new BorderLayout());
 		Panel_Function_Top.setLayout(new FlowLayout(FlowLayout.LEADING));
 		Panel_Function_Center.setLayout(new FlowLayout(FlowLayout.LEADING));
@@ -164,13 +163,12 @@ public class Server_Main extends JFrame implements ActionListener{
 		setVisible(true); 
 
 	}
-	public void actionPerformed(ActionEvent arg0) {
+	public void actionPerformed(ActionEvent e) {
 		// TODO Auto-generated method stub
 		
 	}
 	
 	JMenuBar createMenuBar() {
-
 
 		JMenuBar menuBar = new JMenuBar();
 		JMenuItem mi;

@@ -102,12 +102,10 @@ public class LoginDialog extends JFrame implements ActionListener{
 		if(e.getSource() == loginButton)
 		{
 
-			
 			if (!attemptLogin(userName.getText(), String.valueOf(password.getPassword()))){
 				JOptionPane.showMessageDialog(this, "Incorrect Credentials",
 						"Input Error", JOptionPane.ERROR_MESSAGE);
 			}
-			
 		}
 		
 		else if(e.getSource() == closeButton)

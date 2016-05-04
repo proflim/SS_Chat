@@ -242,7 +242,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		return menuBar;
 	}
-	public void actionPerformed(ActionEvent arg0) {
+	public void actionPerformed(ActionEvent e) {
 		// TODO Auto-generated method stub
 		
 	}
