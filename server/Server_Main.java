@@ -38,9 +38,11 @@ public class Server_Main extends JFrame implements ActionListener{
 	private JScrollPane Pane_UserListBox = new JScrollPane();
 	private JTextArea chatArea = new JTextArea();
 	private JScrollPane Pane_ChatArea;
-	private JTextField receiverField = new JTextField();	//need to set default receiverField as "All Users"
+	private JTextField receiverField;	
 	private JTextArea messageArea = new JTextArea();
 	private JButton sendButton = new JButton("Send"); 
+	private JToggleButton serviceButton = new JToggleButton("Start Service");
+	private static int portNum;  
 
 	
 	public static void main(String[] args) {
@@ -62,7 +64,8 @@ public class Server_Main extends JFrame implements ActionListener{
 		//Create MenuBar
 		setJMenuBar(createMenuBar());
 
-		
+		//Initial portNum value;
+		portNum=8888;
 		//OnlineUserList Panel
 		Panel_OnlineUserList.setPreferredSize(new Dimension(200, 300));
 		Panel_OnlineUserList.setLayout(new BorderLayout());
@@ -96,12 +99,20 @@ public class Server_Main extends JFrame implements ActionListener{
 		//Function Panel
 		Panel_Function.setPreferredSize(new Dimension(300, 90));
 		Panel_Function.setLayout(new BorderLayout());
-		Panel_Function_Top.setLayout(new FlowLayout(FlowLayout.LEADING));
+		Panel_Function_Top.setLayout(new BoxLayout(Panel_Function_Top, BoxLayout.LINE_AXIS));
+		Panel_Function_Top.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 10));
 		Panel_Function_Center.setLayout(new FlowLayout(FlowLayout.LEADING));
 		
-		Panel_Function_Top.add(new JLabel("Send To:   "));
-		receiverField.setPreferredSize(new Dimension(90,20));
+		Panel_Function_Top.add(new JLabel("  Send To:    "));
+		
+		receiverField = new JTextField();	//Need to get the selected value of online users
 		Panel_Function_Top.add(receiverField);
+		Panel_Function_Top.add(Box.createRigidArea(new Dimension(387,10)));
+
+		serviceButton.addActionListener(this);
+		serviceButton.setPreferredSize(new Dimension(120,30));
+		Panel_Function_Top.add(serviceButton);
+		Panel_Function_Top.add(Box.createRigidArea(new Dimension(113,10)));
 		Panel_Function_Center.add(new JLabel("Message: "));
 		Border border = BorderFactory.createLineBorder(Color.BLACK);
 		messageArea.setBorder(border);
@@ -116,55 +127,54 @@ public class Server_Main extends JFrame implements ActionListener{
 		Pane_Top = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, Panel_OnlineUserList, Panel_Chat);
 		Pane_Whole = new JSplitPane(JSplitPane.VERTICAL_SPLIT, Pane_Top, Panel_Function);
 		getContentPane().add(Pane_Whole);
-
-		  
-		  /*
-		setLayout(new BorderLayout());
-		add(new JScrollPane(jta), BorderLayout.CENTER);
-		
-		setTitle("Server");
-		setSize(500, 300);
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setVisible(true); // It is necessary to show the frame here!
-		
-		try {
-		  // Create a server socket
-		  ServerSocket serverSocket = new ServerSocket(8000);
-		  jta.append("Server started at " + new Date() + '\n');
-		
-		  // Listen for a connection request
-		  Socket socket = serverSocket.accept();
-		
-		  // Create data input and output streams
-		  DataInputStream inputFromClient = new DataInputStream(
-		    socket.getInputStream());
-		  DataOutputStream outputToClient = new DataOutputStream(
-		    socket.getOutputStream());
-		
-		  while (true) {
-		    // Receive radius from the client
-		    double radius = inputFromClient.readDouble();
-		
-		    // Compute area
-		    double area = radius * radius * Math.PI;
-		
-		    // Send area back to the client
-		    outputToClient.writeDouble(area);
-		
-		    jta.append("Radius received from client: " + radius + '\n');
-		    jta.append("Area found: " + area + '\n');
-		  }
-		}
-		catch(IOException ex) {
-		  System.err.println(ex);
-		}
-		*/
 		
 		setVisible(true); 
 
 	}
 	public void actionPerformed(ActionEvent e) {
-		// TODO Auto-generated method stub
+		if(e.getSource() == serviceButton){
+			AbstractButton abstractButton = (AbstractButton) e.getSource();
+			boolean selected = abstractButton.getModel().isSelected();
+	        if(selected){
+	        	serviceButton.setText("End Service");
+	        	//Start Server
+	    		try {
+	    			ServerSocket serverSocket = new ServerSocket(portNum);
+	    			chatArea.append("Server started at "+ new Date() + "\n");
+	    			
+	    			while (true){
+	    				//Listen for a connection request
+	    				Socket socket = serverSocket.accept();
+	    				
+	    				InetAddress inetAddress = socket.getInetAddress();
+	    				chatArea.append("Client hostname: "+inetAddress.getHostName()+"\n");
+	    				chatArea.append("Client IPAddress: "+inetAddress.getHostAddress()+"\n");
+	    				chatArea.append("Client LocalAddress: "+socket.getLocalAddress()+"\n");
+	    				chatArea.append("Client LocalPort: "+socket.getLocalPort()+"\n");
+	    				
+	    				//Create a new thread
+	    			}
+	    			
+	    		} catch (IOException e1) {
+	    			// TODO Auto-generated catch block
+	    			e1.printStackTrace();
+	    		}
+	        }
+	        else{
+	        	serviceButton.setText("Start Service");
+	        	
+	        	//End Server
+	        	//End connection with all thread (online users)
+	        	try{
+	        		
+	        	}
+	        	finally{
+	        		//socket.close();	
+	        	}
+	        }
+		}
+        
+        
 		
 	}
 	
@@ -255,6 +265,8 @@ public class Server_Main extends JFrame implements ActionListener{
 		return menuBar;
 	}
 
-
+	public static void setPortNum(int num){
+		portNum=num;
+	}
   
 }

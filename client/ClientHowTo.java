@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -12,7 +13,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingConstants;
 
-public class ClientHowTo extends JFrame{
+public class ClientHowTo extends JDialog{
 	JPanel Panel_Main = new JPanel();
 	JPanel Panel_Bot = new JPanel();
 	private JScrollPane Pane_InfoField;
