@@ -31,7 +31,7 @@ public class Server_Main extends JFrame implements ActionListener{
 	private JSplitPane Pane_Top = new JSplitPane();
 	private JSplitPane Pane_Whole = new JSplitPane();
 	
-	private JTextField numUserField = new JTextField("(0)");
+	private JTextField numUserField;
 	private List<String> userList ;
 	private DefaultListModel userListModel = new DefaultListModel();
 	private JList userListBox;
@@ -42,7 +42,12 @@ public class Server_Main extends JFrame implements ActionListener{
 	private JTextArea messageArea = new JTextArea();
 	private JButton sendButton = new JButton("Send"); 
 	private JToggleButton serviceButton = new JToggleButton("Start Service");
+	
 	private static int portNum;  
+	private ServerSocket serverSocket;
+	private static int userNum;
+	private static int userID=1;
+	
 
 	
 	public static void main(String[] args) {
@@ -64,14 +69,16 @@ public class Server_Main extends JFrame implements ActionListener{
 		//Create MenuBar
 		setJMenuBar(createMenuBar());
 
-		//Initial portNum value;
+		//Initialize variables
 		portNum=8888;
+		userNum=0;
 		//OnlineUserList Panel
 		Panel_OnlineUserList.setPreferredSize(new Dimension(200, 300));
 		Panel_OnlineUserList.setLayout(new BorderLayout());
 		
 		Panel_OnlineUserList_Top.setLayout(new FlowLayout());
 		Panel_OnlineUserList_Top.add(new JLabel("Online Users"));
+		numUserField = new JTextField("("+ userNum+")");
 		numUserField.setEditable(false);
 		Panel_OnlineUserList_Top.add(numUserField);
 		Panel_OnlineUserList.add(Panel_OnlineUserList_Top, BorderLayout.NORTH);
@@ -130,6 +137,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		
 		setVisible(true); 
 
+		
 	}
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() == serviceButton){
@@ -137,37 +145,23 @@ public class Server_Main extends JFrame implements ActionListener{
 			boolean selected = abstractButton.getModel().isSelected();
 	        if(selected){
 	        	serviceButton.setText("End Service");
-	        	//Start Server
-	    		try {
-	    			ServerSocket serverSocket = new ServerSocket(portNum);
-	    			chatArea.append("Server started at "+ new Date() + "\n");
-	    			
-	    			while (true){
-	    				//Listen for a connection request
-	    				Socket socket = serverSocket.accept();
-	    				
-	    				InetAddress inetAddress = socket.getInetAddress();
-	    				chatArea.append("Client hostname: "+inetAddress.getHostName()+"\n");
-	    				chatArea.append("Client IPAddress: "+inetAddress.getHostAddress()+"\n");
-	    				chatArea.append("Client LocalAddress: "+socket.getLocalAddress()+"\n");
-	    				chatArea.append("Client LocalPort: "+socket.getLocalPort()+"\n");
-	    				
-	    				//Create a new thread
-	    			}
-	    			
-	    		} catch (IOException e1) {
-	    			// TODO Auto-generated catch block
-	    			e1.printStackTrace();
-	    		}
+	        	
+	        	//Start Server on new Thread
+	            Thread serverThread = new Thread(new StartServer(portNum));
+	            serverThread.start();
+	        	
 	        }
 	        else{
 	        	serviceButton.setText("Start Service");
 	        	
 	        	//End Server
 	        	//End connection with all thread (online users)
-	        	try{
-	        		
-	        	}
+        		try {
+					serverSocket.close();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 	        	finally{
 	        		//socket.close();	
 	        	}
@@ -178,7 +172,8 @@ public class Server_Main extends JFrame implements ActionListener{
 		
 	}
 	
-	JMenuBar createMenuBar() {
+	//Creates MenuBar 
+	private JMenuBar createMenuBar() {
 
 		JMenuBar menuBar = new JMenuBar();
 		JMenuItem mi;
@@ -268,5 +263,45 @@ public class Server_Main extends JFrame implements ActionListener{
 	public static void setPortNum(int num){
 		portNum=num;
 	}
-  
+	public static int getPortNum(){
+		return portNum;
+	}
+	
+	class StartServer implements Runnable {
+		private int num;
+		
+		public StartServer(int portnum){
+			this.num= portnum;
+		}
+		
+		public void run(){
+			try {
+				System.out.println(portNum);
+				serverSocket = new ServerSocket(portNum);
+				chatArea.append("Server started at "+ new Date() + "\n");
+				
+				while (true){
+					//Listen for a connection request
+					Socket socket = serverSocket.accept();
+					
+					InetAddress inetAddress = socket.getInetAddress();
+					chatArea.append("Client hostname: "+inetAddress.getHostName()+"\n");
+					chatArea.append("Client IPAddress: "+inetAddress.getHostAddress()+"\n");
+					chatArea.append("Client LocalPort: "+socket.getLocalPort()+"\n");
+					
+					//Create a new thread
+				}
+				
+			} catch (IOException e) {
+				// TODO Close Connection Gracefully. 
+				//e.printStackTrace();
+				//Close input/output streams, close socket.
+				chatArea.append("Server ended at "+ new Date() + "\n");
+				
+			}
+		}
+
+	}
+
 }
+

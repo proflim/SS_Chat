@@ -4,11 +4,13 @@ import server.About;
 
 import java.io.*;
 import java.net.*;
+import java.util.Date;
 import java.util.List;
 import java.awt.*;
 import java.awt.event.*;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 
 import Main.LoginDialog;
 import server.Server_Main;
@@ -17,8 +19,8 @@ public class Client_Main extends JFrame implements ActionListener {
 	
 
 	// IO streams
-	private DataOutputStream toServer;
-	private DataInputStream fromServer;
+	private ObjectOutputStream toServer;
+	private ObjectInputStream fromServer;
 
 	//////////////////////////////////////////////////////
 	private JPanel Panel_OnlineUserList = new JPanel();
@@ -43,7 +45,12 @@ public class Client_Main extends JFrame implements ActionListener {
 	private JTextField receiverField = new JTextField();	//need to set default receiverField as "All Users"
 	private JTextArea messageArea = new JTextArea();
 	private JButton sendButton = new JButton("Send"); 
-	
+	private JToggleButton connectButton = new JToggleButton("Connect");
+
+	private static int portNum;
+	private static String ipAddress;
+	private String userName;
+	private int userID;
 	
 	public static void main(String[] args) {
 		new Client_Main();
@@ -64,6 +71,10 @@ public class Client_Main extends JFrame implements ActionListener {
 		//Create MenuBar
 		setJMenuBar(createMenuBar());
 
+		//Initialize value
+		portNum = 8888;
+		ipAddress = "127.0.0.1";
+		userName = "hkuster";	//set default userName
 		
 		//OnlineUserList Panel
 		Panel_OnlineUserList.setPreferredSize(new Dimension(200, 300));
@@ -98,13 +109,23 @@ public class Client_Main extends JFrame implements ActionListener {
 		//Function Panel
 		Panel_Function.setPreferredSize(new Dimension(300, 100));
 		Panel_Function.setLayout(new BorderLayout());
-		Panel_Function_Top.setLayout(new FlowLayout(FlowLayout.LEADING));
+		Panel_Function_Top.setLayout(new BoxLayout(Panel_Function_Top, BoxLayout.LINE_AXIS));
+		Panel_Function_Top.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 10));
 		Panel_Function_Center.setLayout(new FlowLayout(FlowLayout.LEADING));
 		
-		Panel_Function_Top.add(new JLabel("Send To:   "));
-		receiverField.setPreferredSize(new Dimension(90,20));
+		Panel_Function_Top.add(new JLabel("  Send To:    "));
+		receiverField = new JTextField();
+		
 		Panel_Function_Top.add(receiverField);
+		Panel_Function_Top.add(Box.createRigidArea(new Dimension(387,10)));
+
+		connectButton.addActionListener(this);
+		connectButton.setPreferredSize(new Dimension(120,30));
+		Panel_Function_Top.add(connectButton);
+		Panel_Function_Top.add(Box.createRigidArea(new Dimension(113,10)));
 		Panel_Function_Center.add(new JLabel("Message: "));
+		Border border = BorderFactory.createLineBorder(Color.BLACK);
+		messageArea.setBorder(border);
 		messageArea.setPreferredSize(new Dimension(600,80));
 		Panel_Function_Center.add(messageArea);
 		sendButton.addActionListener(this);
@@ -119,29 +140,51 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		setVisible(true);
 
-		//Start Connection	
-		try {
-		  // Create a socket to connect to the server
-		  Socket socket = new Socket("localhost", 8888);
-		  //Socket socket = new Socket("130.254.204.36", 8888);
-		  // Socket socket = new Socket("drake.Armstrong.edu", 8000);
-		
-		  // Create an input stream to receive data from the server
-		  fromServer = new DataInputStream(
-		    socket.getInputStream());
-		
-		  // Create an output stream to send data to the server
-		  toServer =
-		    new DataOutputStream(socket.getOutputStream());
-		}
-		catch (IOException ex) {
-		  chatArea.append(ex.toString() + '\n');
-	    }
+
 
 	}
 	
-	JMenuBar createMenuBar() {
+	public void actionPerformed(ActionEvent e) {
+		if(e.getSource() == connectButton){
+			AbstractButton abstractButton = (AbstractButton) e.getSource();
+			boolean selected = abstractButton.getModel().isSelected();
+	        if(selected){
+	        	connectButton.setText("Disconnect");
+	        	//Start Connection
+	        	try {
+	      		  // Create a socket to connect to the server
 
+	      		  Socket socket = new Socket(ipAddress, portNum);
+	      		  chatArea.append("Connection established at "+new Date()+"\n");
+	      		  // Create an input stream to receive data from the server
+	      		  fromServer = new ObjectInputStream(socket.getInputStream());
+	      		  // Create an output stream to send data to the server
+	      		  toServer = new ObjectOutputStream(socket.getOutputStream());
+	      		  
+	      		  //Data d = new Data()
+	      		}
+	      		catch (IOException ex) {
+	      		  chatArea.append(ex.toString() + '\n');
+	      	    }
+	        }
+	        else{
+	        	connectButton.setText("Connect");
+	        	
+	        	//End Server
+	        	//End connection with all thread (online users)
+	        	try{
+	        		
+	        	}
+	        	finally{
+	        		//socket.close();	
+	        	}
+	        }
+		}
+		
+	}
+	
+	//Creates MenuBar
+	private JMenuBar createMenuBar() {
 
 		JMenuBar menuBar = new JMenuBar();
 		JMenuItem mi;
@@ -222,8 +265,5 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		return menuBar;
 	}
-	public void actionPerformed(ActionEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
+
 }

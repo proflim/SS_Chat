@@ -45,6 +45,7 @@ public class PortConfig extends JDialog implements ActionListener{
 			if(checkValidNum(PortNumField.getText())){
 				int num = Integer.parseInt(PortNumField.getText());
 				Server_Main.setPortNum(num);
+				System.out.println("Server Port changed to: "+Server_Main.getPortNum());
 			}
 			else{
 				//TODO: Output error message and prompt to input again. (Maybe use while loop)
