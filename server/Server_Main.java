@@ -3,7 +3,9 @@ package server;
 
 
 
+import Main.Data;
 import Main.LoginDialog;
+import Main.User;
 
 import java.io.*;
 import java.net.*;
@@ -32,7 +34,6 @@ public class Server_Main extends JFrame implements ActionListener{
 	private JSplitPane Pane_Whole = new JSplitPane();
 	
 	private JTextField numUserField;
-	private List<String> userList ;
 	private DefaultListModel userListModel = new DefaultListModel();
 	private JList userListBox;
 	private JScrollPane Pane_UserListBox = new JScrollPane();
@@ -46,7 +47,8 @@ public class Server_Main extends JFrame implements ActionListener{
 	private static int portNum;  
 	private ServerSocket serverSocket;
 	private static int userNum;
-	private static int userID=1;
+	private static int counterID=1;
+	private static LinkedList<User> userList;
 	
 
 	
@@ -72,6 +74,8 @@ public class Server_Main extends JFrame implements ActionListener{
 		//Initialize variables
 		portNum=8888;
 		userNum=0;
+		userList = new LinkedList<User>();
+		
 		//OnlineUserList Panel
 		Panel_OnlineUserList.setPreferredSize(new Dimension(200, 300));
 		Panel_OnlineUserList.setLayout(new BorderLayout());
@@ -283,13 +287,31 @@ public class Server_Main extends JFrame implements ActionListener{
 				while (true){
 					//Listen for a connection request
 					Socket socket = serverSocket.accept();
-					
+					chatArea.append("Received connection\n");
+					//increment number of online users
+					userNum++;
+					chatArea.append("Num of users online: "+userNum+"\n");
+					/*
 					InetAddress inetAddress = socket.getInetAddress();
 					chatArea.append("Client hostname: "+inetAddress.getHostName()+"\n");
 					chatArea.append("Client IPAddress: "+inetAddress.getHostAddress()+"\n");
 					chatArea.append("Client LocalPort: "+socket.getLocalPort()+"\n");
+					*/
+					
+					
+			        // Create data input and output streams
+			        ObjectInputStream inputFromClient = new ObjectInputStream(
+			          socket.getInputStream());
+			        ObjectOutputStream outputToClient = new ObjectOutputStream(
+			          socket.getOutputStream());
+			        
+			        //Add to User List
+					User u = new User("",counterID, socket, outputToClient);
+					userList.add(u);
 					
 					//Create a new thread
+			        ClientListeningThread task = new ClientListeningThread(inputFromClient, counterID);
+					new Thread(task).start();
 				}
 				
 			} catch (IOException e) {
@@ -301,6 +323,92 @@ public class Server_Main extends JFrame implements ActionListener{
 			}
 		}
 
+	}
+	
+	//Define thread class for new client connection
+	class ClientListeningThread implements Runnable{
+		private ObjectInputStream inputFromClient;
+		private int userID;
+		private String userName;
+		private int counter =1;
+		private boolean isFirstTransmission;
+		
+		
+		public ClientListeningThread(ObjectInputStream is, int ID){
+			
+			this.inputFromClient = is;
+			this.userID = ID;
+			this.isFirstTransmission=true;
+			
+			//After assigning ID, increment ID
+			counterID++;
+		}
+		
+		public void run() {
+			try{
+		        // Continuously listen to the client
+		        while (true) {
+		        	Data object = (Data) inputFromClient.readObject();
+		        	
+		        	/*
+		        	 * If it is first transmission,
+		        	 * Welcome the new user, assign unique ID, and pass UserList
+		        	 */
+		        	if(isFirstTransmission){
+		        		userName = object.getfromName();
+			        	//Welcome new user
+		        		String s = "User "+object.getfromName()+" is online.\n";
+		        		chatArea.append(s);
+			        	
+		        		//Set username in the userList
+			        	for(User u : userList){
+			        		if(u.getUserID()==userID){
+			        			u.setUserName(userName);
+			        			//chatArea.append(userName+", "+userID);
+			        		}
+			        		
+			        		
+			        	}
+			        	
+			        	
+			        	//Pass unique ID and userList to the new user, 
+			        	//and Announce new user to other users
+			        	for(User u: userList){
+			        		if(u.getUserID()==userID){
+			        			Data d = new Data(2, userID, userList);
+			        			u.getOutputStream().writeObject(d);
+			        		}
+			        		else{
+				        		Data d = new Data(4, s, userList);
+			        			u.getOutputStream().writeObject(d);
+			        		}
+
+			        	}
+			        	
+			        	isFirstTransmission=false;
+		        	}
+		        	
+		        	//Process for different message types
+		        	
+		        	
+		        }
+			}
+			catch(ClassNotFoundException e){
+				//e.printStackTrace();
+	    		System.err.println(e);
+			}
+		    catch(IOException e) {
+	    		System.err.println(e);
+		    }
+			finally{
+				if(counter>0){
+					chatArea.append("User "+ userName + " has disconnected.\n");
+					userNum--;
+					System.out.println(userNum);
+					counter--;
+				}
+			}
+		}
 	}
 
 }

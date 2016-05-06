@@ -12,6 +12,7 @@ import java.awt.event.*;
 import javax.swing.*;
 import javax.swing.border.Border;
 
+import Main.Data;
 import Main.LoginDialog;
 import server.Server_Main;
 
@@ -19,8 +20,8 @@ public class Client_Main extends JFrame implements ActionListener {
 	
 
 	// IO streams
-	private ObjectOutputStream toServer;
-	private ObjectInputStream fromServer;
+	private ObjectOutputStream outputToServer;
+	private ObjectInputStream inputFromServer;
 
 	//////////////////////////////////////////////////////
 	private JPanel Panel_OnlineUserList = new JPanel();
@@ -36,7 +37,6 @@ public class Client_Main extends JFrame implements ActionListener {
 	private JSplitPane Pane_Whole = new JSplitPane();
 	
 	private JTextField numUserField = new JTextField("(0)");
-	private List<String> userList ;
 	private DefaultListModel userListModel = new DefaultListModel();
 	private JList userListBox;
 	private JScrollPane Pane_UserListBox = new JScrollPane();
@@ -150,22 +150,11 @@ public class Client_Main extends JFrame implements ActionListener {
 			boolean selected = abstractButton.getModel().isSelected();
 	        if(selected){
 	        	connectButton.setText("Disconnect");
-	        	//Start Connection
-	        	try {
-	      		  // Create a socket to connect to the server
-
-	      		  Socket socket = new Socket(ipAddress, portNum);
-	      		  chatArea.append("Connection established at "+new Date()+"\n");
-	      		  // Create an input stream to receive data from the server
-	      		  fromServer = new ObjectInputStream(socket.getInputStream());
-	      		  // Create an output stream to send data to the server
-	      		  toServer = new ObjectOutputStream(socket.getOutputStream());
-	      		  
-	      		  //Data d = new Data()
-	      		}
-	      		catch (IOException ex) {
-	      		  chatArea.append(ex.toString() + '\n');
-	      	    }
+	        	//Start Connection on New Thread
+	        	Thread clientThread = new Thread(new StartClient(ipAddress,portNum));
+	        	clientThread.start();
+	        	
+	        	
 	        }
 	        else{
 	        	connectButton.setText("Connect");
@@ -266,4 +255,82 @@ public class Client_Main extends JFrame implements ActionListener {
 		return menuBar;
 	}
 
+	
+	class StartClient implements Runnable {
+		private int portNum;
+		private String ipAddress;
+		
+		public StartClient(String address, int num){
+			this.ipAddress = address;
+			this.portNum = num;
+		}
+		
+		public void run(){
+			
+        	try {
+        		// Create a socket to connect to the server
+			
+				Socket socket = new Socket(ipAddress, portNum);
+				chatArea.append("You have logged in at "+new Date()+"\n");
+				  
+				// Create an output stream to send data to the server
+				outputToServer = new ObjectOutputStream(socket.getOutputStream());
+				
+				
+				//send username to server
+				Data d = new Data(1,userName);
+				outputToServer.writeObject(d);
+				
+				// Create an input stream to receive data from the server
+				inputFromServer = new ObjectInputStream(socket.getInputStream());
+			    //Create a new thread
+		        ListeningThread task = new ListeningThread(inputFromServer);
+				new Thread(task).start();
+      		}
+      		catch (IOException ex) {
+      			chatArea.append(ex.toString() + '\n');
+      	    }
+		}
+	}
+	//Define thread class for new client connection
+	class ListeningThread implements Runnable{
+		private ObjectInputStream inputFromServer;
+		
+		
+		public ListeningThread(ObjectInputStream is){
+			
+			this.inputFromServer = is;
+		}
+		
+		public void run() {
+			try{
+		        // Continuously listen to the client
+		        while (true) {
+		        	Data object = (Data) inputFromServer.readObject();
+		        	
+		        	//Process for different message types
+		        	if(object.getType()==2){
+		        		userID = object.gettoID();
+		        		chatArea.append("Your ID is: "+userID+"\n");
+		        		
+		        		//Update UserList
+		        	}
+		        	else if (object.getType()==4){
+		        		chatArea.append(object.getMessage());
+		        		
+		        		//Update UserList
+		        	}
+		        	
+		        }
+			}
+			catch(ClassNotFoundException e){
+				//e.printStackTrace();
+	    		System.err.println(e);
+
+			}
+		    catch(IOException e) {
+	    		System.err.println(e);
+		    }
+		}
+	}
 }

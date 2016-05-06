@@ -1,78 +1,65 @@
 package Main;
 
+import java.util.LinkedList;
+
 public class Data implements java.io.Serializable {
 
-	  private String fromName;
-	  private String toName;
-	  private int fromID;
-	  private int toID;
-	  private int numUser=0; //used only for communication from server->client
-	  private String message;
+	  /*
+	   * Type
+	   * 0: normal communication
+	   * 1: update username (client -> server)
+	   * 2: assign unique userID (server -> client)
+	   * 3: terminate connection
+	   * 4: announce new user (server -> client) 
+	   * 5: announce disconnection (server -> client)
+	   */
+	
+	  private int type=-1;
+	  private String fromName="null";
+	  private String toName="null";
+	  private int fromID=-1;
+	  private int toID=-1;	  
+	  private String message="void";
+	  private LinkedList<User> userList=null;
 
-	  
-	  //Client -> Server -> Client
-	  //Default Data constructor for communication
-	  //toID = 0 for sending to all user
-	  public Data(String fname, String tname, int fid, int tid, String msg) {
-
-	    this.fromName = fname;
-	    this.toName = tname;
-	    this.fromID = fid;
-	    this.toID = tid;
-	    this.message = msg;
+	  //Basic constructor
+	  //Basic Communication (Client -> Server -> Client)
+	  public Data(int t, String fname, String tname, int fid, int tid, String msg, LinkedList<User> list) {
+		  this.type = t;
+		  this.fromName = fname;
+		  this.toName = tname;
+		  this.fromID = fid;
+		  this.toID = tid;
+		  this.message = msg;
+		  this.userList = list;
 	  }
 	  
-	  //Client -> Server -> Client
-	  //Default Data constructor for communication
-	  //toID = 0 for sending to all user
-	  public Data(String fname, String tname, int fid, int tid, int num,String msg) {
-
-	    this.fromName = fname;
-	    this.toName = tname;
-	    this.fromID = fid;
-	    this.toID = tid;
-	    this.numUser = num;
-	    this.message = msg;
+	  //Notify/Update Username (Client -> Server)
+	  public Data(int t, String fname){
+		  this.type = t;
+		  this.fromName = fname;
 	  }
 	  
-	  //Client -> Server
-	  //Data constructor when updating username
-	  //For updating username (fromName -> toName) on the server
-	  //toID=-1
-	  public Data(String fname, String tname, int fid) {
-
-		    this.fromName = fname;
-		    this.toName = tname;
-		    this.fromID = fid;
-		    this.toID = -1;
-		    this.message = "Updated username " + fname + " to " + tname+"\n";
+	  //Assign uniqueID (Server -> Client)
+	  public Data(int t, int tid, LinkedList<User> list){
+		  this.type = t;
+		  this.toID = tid;
+		  this.userList = list;
 	  }
 	  
-	  //Client -> Server
-	  //When establishing connection
-	  //Tells server the username of the client
-	  //toID=-1
-	  //fromID=-1
-	  public Data(String fname) {
-
-		    this.fromName = fname;
-		    this.toName = "";
-		    this.fromID = -1;
-		    this.toID = -1;
-		    this.message = "User " + fname + " is online.\n";
+	  //Quit connection (Type = 3)
+	  public Data(int t){
+		  this.type=t;
 	  }
 	  
-	  //Server -> Client
-	  //Data constructor when assigning unique IDs to clients
-	  //The server sends unique ID to the client when connecting
-	  //fromID = -1
-	  public Data(int tid, String msg) {
-
-		    this.fromName = "";
-		    this.toName = "";
-		    this.fromID = -1;
-		    this.toID = tid;
-		    this.message = msg;	//msg is the system level message
+	  public Data(int t, String msg, LinkedList<User> list){
+		  this.type = t;
+		  this.message = msg;
+		  this.userList=list;
+	  }
+	  
+	  public int getType(){
+		  return this.type;
 	  }
 	  
 	  public String getfromName(){
