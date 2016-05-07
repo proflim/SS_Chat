@@ -23,7 +23,11 @@ import client.Client_Main;
 
 
 
-
+/**
+ * LoginDialog GUI
+ * @author ÀÓ¼º¼ö
+ *
+ */
 public class LoginDialog extends JFrame implements ActionListener{
 
 	private JTextField userName;
@@ -32,6 +36,9 @@ public class LoginDialog extends JFrame implements ActionListener{
 	private JButton closeButton;
 	private JButton signupButton;
 	
+	/**
+	 * Constructor for LoginDialog
+	 */
 	public LoginDialog(){
 		setTitle("SSChat Login");
 		
@@ -96,7 +103,10 @@ public class LoginDialog extends JFrame implements ActionListener{
 		
 	}
 	
-
+	/**
+	 * Listener for LoginDialog
+	 * listens for loginButton, closeButton
+	 */
 	public void actionPerformed(ActionEvent e) {
 
 		if(e.getSource() == loginButton)
@@ -117,7 +127,13 @@ public class LoginDialog extends JFrame implements ActionListener{
 		}
 	}
 
-
+	/**
+	 * Check if credentials are valid
+	 * Currently Checks only if the id equals "server" or "client"
+	 * @param id
+	 * @param pw
+	 * @return
+	 */
 	private boolean attemptLogin(String id, String pw) {
 
 		

@@ -15,7 +15,12 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-
+/**
+ * ConnectionConfig Class
+ * 
+ * @author ÀÓ¼º¼ö
+ *
+ */
 public class ConnectionConfig extends JDialog implements ActionListener{
 	
 	private JPanel Panel_Top = new JPanel();
@@ -27,7 +32,12 @@ public class ConnectionConfig extends JDialog implements ActionListener{
 	private JButton doneButton = new JButton("Done");
 	private JTextArea chatArea;
 	
-	
+	/**
+	 * Constructor for ConnectionConfig GUI
+	 * @param jta jtextarea
+	 * @param portnum portnumber
+	 * @param ipaddress ipaddress
+	 */
 	public ConnectionConfig(JTextArea jta, int portnum, String ipaddress){
 		this.chatArea = jta;
 		
@@ -59,7 +69,10 @@ public class ConnectionConfig extends JDialog implements ActionListener{
 		
 		setVisible(true);
 	}
-
+	/**
+	 * Listener for ConnectionConfig
+	 * Listens for doneButton
+	 */
 	public void actionPerformed(ActionEvent e) {
 		
 		//If done is pressed, updates portNum value (if it is a valid value)
@@ -82,7 +95,13 @@ public class ConnectionConfig extends JDialog implements ActionListener{
 		
 	}
 	
-	//Validity Check on modified PortNumField: Checks if the value is an integer
+	
+	/**
+	 * Validity Check on textField
+	 * checks if the textfield value is an integer
+	 * @param text
+	 * @return
+	 */
 	private boolean checkValidNum( String text ){
 		return text.matches("\\d*");
 		

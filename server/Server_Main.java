@@ -20,9 +20,16 @@ import java.awt.event.WindowEvent;
 
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
+/***
+ * Server_Main Class
+ * @author 임성수
+ *
+ */
 public class Server_Main extends JFrame implements ActionListener{
-  // Text area for displaying contents
+   
 	private JPanel Panel_OnlineUserList = new JPanel();
 	private JPanel Panel_OnlineUserList_Top = new JPanel();
 	private JPanel Panel_Chat = new JPanel();
@@ -46,7 +53,8 @@ public class Server_Main extends JFrame implements ActionListener{
 	
 	private static int portNum;  
 	private ServerSocket serverSocket;
-
+	private int selectedIndex;
+	private String selectedUser;
 	private static int userNum;
 	private static int counterID=1;
 	private static final LinkedList<User> userList= new LinkedList<User>();
@@ -56,11 +64,14 @@ public class Server_Main extends JFrame implements ActionListener{
 	public static void main(String[] args) {
 		new Server_Main();
 	}
-
+	
+	/***
+	 * Constructs main Server GUI
+	 */
 	public Server_Main() {
 		setTitle("SSChat Server");
-		setSize(800, 500);
-		setResizable(false);
+		setSize(800, 530);
+		//setResizable(false);
 		setLocation(300,100);
 		
 		addWindowListener(new WindowAdapter() {
@@ -75,7 +86,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		//Initialize variables
 		portNum=8888;
 		userNum=0;
-		//userList = new LinkedList<User>();
+		
 		
 		//OnlineUserList Panel
 		Panel_OnlineUserList.setPreferredSize(new Dimension(200, 300));
@@ -89,11 +100,25 @@ public class Server_Main extends JFrame implements ActionListener{
 		Panel_OnlineUserList_Top.add(numUserField);
 		Panel_OnlineUserList.add(Panel_OnlineUserList_Top, BorderLayout.NORTH);
 		
-		//Dummy data//
-		userListModel.addElement("All");
 		
-		
+		userListModel.addElement("All"); //add Default data 
 		userListBox = new JList(userListModel);
+		/***
+		 * Listener for the userListBox
+		 * If certain element is selected, sets the receiverField to that value.
+		 * Updates String selectedUser, int selectedIndex: for later sending message.
+		 */
+		userListBox.addListSelectionListener(new ListSelectionListener(){
+			public void  valueChanged(ListSelectionEvent s){
+				int index =((JList)s.getSource()).getSelectedIndex();
+				selectedUser = (String) ((JList)s.getSource()).getSelectedValue();
+				//System.out.println("Index: "+index);
+				//System.out.println("userString: "+userString);
+				receiverField.setText(selectedUser);
+				selectedIndex=index;
+			}
+		});
+		
 		Pane_UserListBox = new JScrollPane(userListBox);
 		Panel_OnlineUserList.add(Pane_UserListBox,BorderLayout.CENTER);
 		
@@ -146,6 +171,11 @@ public class Server_Main extends JFrame implements ActionListener{
 
 		
 	}
+	
+	/***
+	 * Listener for main Server GUI. 
+	 * Listens for serviceButton(Start/End Service), and sendButton(Send system level message to users)
+	 */
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() == serviceButton){
 			AbstractButton abstractButton = (AbstractButton) e.getSource();
@@ -175,17 +205,49 @@ public class Server_Main extends JFrame implements ActionListener{
 				}
 	        	finally{
 	        		try {
+	        			//Clear Data
 	        			userList.clear();
+	        			//Close ServerSocket
 						serverSocket.close();
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}	
 	        	}
 	        }
 		}
+		else if(e.getSource() == sendButton){
+			
+			String msg = messageArea.getText();
+			//display message
+			displayMessage("ADMIN",0,selectedUser,msg);
+			
+			//selectedIndex, selectedUser
+			//send message to server
+			
+			try{
+				Data d = new Data(0,"ADMIN",selectedUser,0, selectedIndex, msg);
+				//chatArea.append("selectedIndex: "+selectedIndex+", "+selectedUser+"\n");
+				if(d.gettoIndex()==0){//send to All
+					for(User u: userList){
+						u.getOutputStream().writeObject(d);
+					}
+				}
+				else{//sent to specific Client
+					userList.get(d.gettoIndex()-1).getOutputStream().writeObject(d);
+				}
+			}
+			catch(IOException e1){
+				e1.printStackTrace();
+				chatArea.append("System Message: Unsuccessfully sent to client.\n");
+			}
+			//chatArea.append("System Message: Successfully sent to client.\n");
+		}
         
 	}
+	/***
+	 * disables GUI (userListBox, chatArea, messageArea, sendButton)
+	 * used when Server is not yet connected.
+	 */
 	private void disableGUI(){
 		userListBox.setOpaque(false);
 		chatArea.setOpaque(false);
@@ -196,6 +258,10 @@ public class Server_Main extends JFrame implements ActionListener{
 		Panel_Function_Center.repaint();
 	}
 	
+	/***
+	 * enables GUI (userListBox, chatArea, messageArea, sendButton)
+	 * used when Server is connected.
+	 */
 	private void enableGUI(){
 		userListBox.setOpaque(true);
 		chatArea.setOpaque(true);
@@ -207,7 +273,13 @@ public class Server_Main extends JFrame implements ActionListener{
 
 	}
 	
-	//Creates MenuBar 
+	/***
+	 * creates MenuBar in the main Server GUI
+	 * Menu implemented: 
+	 * Access: Exit, Config: Port Config, Help: How to, About
+	 * Listeners for menu bars are implemented anonymously (Functionality trivial)
+	 * @return JMenuBar
+	 */
 	private JMenuBar createMenuBar() {
 
 		JMenuBar menuBar = new JMenuBar();
@@ -264,18 +336,38 @@ public class Server_Main extends JFrame implements ActionListener{
 		return menuBar;
 	}
 
+	/***
+	 * sets Port Number
+	 * @param num
+	 */
 	static void setPortNum(int num){
 		portNum=num;
 	}
 
-	
+	/***
+	 * Starts Server.
+	 * This class implements a thread that listens for new connections.
+	 * For each new connection, a new ClientListeningthread is spawned.
+	 * @author 임성수
+	 *
+	 */
 	class StartServer implements Runnable {
-		private int num;
+		private int num; //port number
 		
+		 
+		/***
+		 * constructor of StartServer
+		 * 
+		 * @param portnum
+		 */
 		public StartServer(int portnum){
 			this.num= portnum;
 		}
 		
+		/***
+		 * run()
+		 * Connects to the designated port and listens for new connections.
+		 */
 		public void run(){
 			try {
 				chatArea.append("Opening server on Port "+portNum+"..\n");
@@ -285,7 +377,7 @@ public class Server_Main extends JFrame implements ActionListener{
 				while (true){
 					//Listen for a connection request
 					Socket socket = serverSocket.accept();
-					chatArea.append("Received connection\n");
+					//chatArea.append("Received connection\n");
 										
 					
 			        // Create data input and output streams
@@ -300,17 +392,18 @@ public class Server_Main extends JFrame implements ActionListener{
 					
 					//Create a new thread
 			        ClientListeningThread task = new ClientListeningThread(socket, inputFromClient, outputToClient, counterID);
-					//ClientListeningThread task = new ClientListeningThread(socket, counterID);
 					new Thread(task).start();
 				}
 				
 			} catch (IOException e) {
 				//e.printStackTrace();
 			}
-			finally {
+			finally { //quit connection
 				chatArea.append("Server ended at "+ new Date() + "\n");
 				disableGUI();
 				resetUserListDisplay();
+				
+				//Send termination message to all online users
 				try {
 					Data d = new Data(3);
 					for(User u: userList){
@@ -318,15 +411,13 @@ public class Server_Main extends JFrame implements ActionListener{
 					}
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
-					System.err.println("Exception when sending terminating signal to clients.");
+					System.err.println("IOException when sending terminating signal to clients.");
 					e1.printStackTrace();
 				}
-				finally{
+				finally{//close serverSocket
 	        		try {
-	        			
 						serverSocket.close();
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}	
 				}
@@ -335,7 +426,11 @@ public class Server_Main extends JFrame implements ActionListener{
 
 	}
 	
-	//Define thread class for new client connection
+	/***
+	 * Class for listening to each client connection
+	 * @author 임성수
+	 *
+	 */
 	class ClientListeningThread implements Runnable{
 		private Socket socket;
 		private ObjectInputStream inputFromClient;
@@ -345,7 +440,14 @@ public class Server_Main extends JFrame implements ActionListener{
 		private int counter =1;
 		private boolean isFirstTransmission;
 
-		
+		/***
+		 * Constructor for ClientListeningThread
+		 * 
+		 * @param socket
+		 * @param is
+		 * @param os
+		 * @param ID
+		 */
 		public ClientListeningThread(Socket socket, ObjectInputStream is, ObjectOutputStream os, int ID){
 			
 			this.socket = socket;
@@ -353,15 +455,24 @@ public class Server_Main extends JFrame implements ActionListener{
 			this.inputFromClient = is;
 			this.outputToClient = os;
 			this.isFirstTransmission=true;
-			//this.userList = list;
+			
 			
 			//After assigning ID, increment ID
 			counterID++;
 		}
+		
+		/***
+		 * change UserName
+		 * @param newName
+		 */
 		public void changeUserName(String newName){
 			this.userName = newName;
 		}
 		
+		/***
+		 * listens for any data transmission from the client.
+		 * Processes incoming Data Object according to type
+		 */
 		public void run() {
 			try{
 
@@ -376,7 +487,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		        	 */
 		        	if(isFirstTransmission){
 		        		userName = object.getfromName();
-			        	//Welcome new user
+			        	//Announce new user
 		        		String s = "User "+object.getfromName()+" is online.\n";
 		        		chatArea.append(s);
 			        	
@@ -384,27 +495,25 @@ public class Server_Main extends JFrame implements ActionListener{
 			        	for(User u : userList){
 			        		if(u.getUserID()==userID){
 			        			u.setUserName(userName);
-			        			//chatArea.append(userName+", "+userID);
 			        		}
 			        	}
 			        	
 			        	//Pass unique ID and userList to the new user, 
 			        	//and Announce new user to other users
-			        	chatArea.append("sendingUserListSize: "+userList.size()+"\n");
 			        	LinkedList<User> uList = userList;
 			        	for(User u: userList){
 			        		if(u.getUserID()==userID){
 			        			Data d1 = new Data(2, userID, uList);
 			        			u.getOutputStream().writeObject(d1);
 			        			u.getOutputStream().flush();
-					        	chatArea.append("newUser["+u.getUserID()+"]: "+uList.size()+"\n");
+					        	//chatArea.append("newUser["+u.getUserID()+"]: "+uList.size()+"\n");
 					        
 			        		}
 			        		else{
 				        		Data d2 = new Data(4, userName,userID, s, uList);
 			        			u.getOutputStream().writeObject(d2);
 			        			u.getOutputStream().flush();
-					        	chatArea.append("otherUser["+u.getUserID()+"]: "+uList.size()+"\n");
+					        	//chatArea.append("otherUser["+u.getUserID()+"]: "+uList.size()+"\n");
 
 			        		}
 			        		
@@ -414,7 +523,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		        	else{
 		        	
 			        	//Process for different message types
-			        	//Exception in Case 3 (Terminate Connection immediately)
+			        	//Except for Case 3 (Terminate Connection immediately)
 			        	if(object.getType()==3){
 			        		break;
 			        	}
@@ -427,57 +536,63 @@ public class Server_Main extends JFrame implements ActionListener{
 		        
 			}
 			catch(ClassNotFoundException e){
-				//e.printStackTrace();
-	    		System.err.println(e);
+				e.printStackTrace();
 			}
 		    catch(IOException e) {
 		    	//e.printStackTrace();
-		    	//System.err.println("Error: Client interrupted suddenly");
-		    	//chatArea.append("Error: User "+userName+"["+userID+"] has lost connection.");
-		    	//System.err.println(e);
 		    }
-			finally{
+			finally{//Close connection
+				
 				if(!serverSocket.isClosed()){
-					//if(counter>0){
-		        		String s = "User "+userName+"["+userID+"] has disconnected.\n";
-						chatArea.append(s);
-						int index=-1;
-		        		for(int i = 0; i<userList.size();i++){
-		        			if(userList.get(i).getUserID()==userID){
-		        				index =i;
-		        			}
-		        		}
-		        		userList.remove(index);
-		        		chatArea.append("Deleted userID: "+userID+"\n");
-		        		
-		        		chatArea.append("userList size: "+userList.size()+"\n");
-		        		for(User u: userList){
-			        		Data d = new Data(5, userName,userID, s, userList);
-			        		try {
-								u.getOutputStream().writeObject(d);
-								u.getOutputStream().flush();
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-		        		}
-						
-						updateUserListDisplay();
-						
-						try {
-							inputFromClient.close();
-							outputToClient.close();
-							socket.close();
+					//Announce disconnect
+	        		String s = "User "+userName+"["+userID+"] has disconnected.\n";
+					chatArea.append(s);
+					
+					//Remove User from UserList
+					int index=-1;
+	        		for(int i = 0; i<userList.size();i++){
+	        			if(userList.get(i).getUserID()==userID){
+	        				index =i;
+	        			}
+	        		}
+	        		userList.remove(index);
+	        		
+	        		//Notify Disconnect to other Users
+	        		for(User u: userList){
+		        		Data d = new Data(5, userName,userID, s, userList);
+		        		try {
+							u.getOutputStream().writeObject(d);
+							u.getOutputStream().flush();
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-						
-						counter--;
-					//}
+	        		}
+					
+					updateUserListDisplay();
+					
+					//close streams and socket
+					try {
+						inputFromClient.close();
+						outputToClient.close();
+						socket.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
 				}
 			}
 		}
+		
+		/***
+		 * process Messages appropriately for different types
+		 * 
+		 * 0: normal communication (Client sends message to another Client)
+		 * 1: update username (Client notifies username (can be new or to update) )
+		 * 
+		 * @param data
+		 */
 		private void processMessageServer(Data data){
 			switch (data.getType()){
 				case 0: //normal communication
@@ -499,7 +614,7 @@ public class Server_Main extends JFrame implements ActionListener{
 						e.printStackTrace();
 						chatArea.append("Deliver Message: Unsuccessfully sent to client.\n");
 					}
-					chatArea.append("Deliver Message: Successfully sent to client.\n");
+					//chatArea.append("Deliver Message: Successfully sent to client.\n");
 					break;
 			
 				case 1://update username
@@ -527,7 +642,7 @@ public class Server_Main extends JFrame implements ActionListener{
 						e.printStackTrace();
 						chatArea.append("Update UserList: Unsuccessfully sent to client.\n");
 					}
-					chatArea.append("Update UserList: Successfully sent to client.\n");
+					//chatArea.append("Update UserList: Successfully sent to client.\n");
 					
 					break;
 				
@@ -539,13 +654,17 @@ public class Server_Main extends JFrame implements ActionListener{
 		
 	}
 
-	
+	/***
+	 * Updates UserList
+	 * Changes userName at ID into newName
+	 * @param newName
+	 * @param id
+	 */
 	private void updateUserList(String newName, int id){
 		
 		String oldName="";
 		for(int i=0; i<userList.size();i++){
 			if(userList.get(i).getUserID() == id){
-				chatArea.append("Found Match: "+i+"\n");
 				oldName = userList.get(i).getUserName();
 				userList.get(i).setUserName(newName);
 			}
@@ -553,6 +672,9 @@ public class Server_Main extends JFrame implements ActionListener{
 		chatArea.append("User ("+oldName+") changed name to ("+newName+")\n");
 	}
 	
+	/***
+	 * updates UserList Display
+	 */
 	private void updateUserListDisplay(){
 		//increment number of online users
 		userNum=userList.size();
@@ -565,6 +687,7 @@ public class Server_Main extends JFrame implements ActionListener{
 			userListModel.addElement(a.getUserName()+"["+a.getUserID()+"]");
 		}
 	}
+	
 	/**
 	 * resets UserListDisplay (when the server ends / client logs out)
 	 */
@@ -574,8 +697,11 @@ public class Server_Main extends JFrame implements ActionListener{
 		userListModel.removeAllElements();
 		userListModel.addElement("All");
 	}
+	
 	/**
 	 * Displays message to chatArea
+	 * For 0: normal communication
+	 * 	"Name[ID]  >>  Name[ID] : msg"
 	 * 
 	 * @param fromName
 	 * @param fromID

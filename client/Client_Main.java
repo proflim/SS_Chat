@@ -2,14 +2,6 @@ package client;
 
 import server.About;
 
-
-
-
-
-
-
-
-
 import java.io.*;
 import java.net.*;
 import java.util.Date;
@@ -26,17 +18,19 @@ import javax.swing.event.ListSelectionListener;
 import Main.Data;
 import Main.LoginDialog;
 import Main.User;
-import server.Server_Main;
 
+/***
+ * Client_Main Class
+ * @author 임성수
+ *
+ */
 public class Client_Main extends JFrame implements ActionListener {
 	
 
-	// IO streams
 	private ObjectOutputStream outputToServer;
 	private ObjectInputStream inputFromServer;
 	private Socket socket;
 
-	//////////////////////////////////////////////////////
 	private JPanel Panel_OnlineUserList = new JPanel();
 	private JPanel Panel_OnlineUserList_Top = new JPanel();
 	
@@ -73,12 +67,14 @@ public class Client_Main extends JFrame implements ActionListener {
 	public static void main(String[] args) {
 		new Client_Main();
 	}
-
+	/***
+	 * Constructs main Client GUI
+	 */
 	public Client_Main() {
 
 		setTitle("SSChat Client");
-		setSize(800, 500);
-		setResizable(false);
+		setSize(800, 530);
+		//setResizable(false);
 		setLocation(300,100);
 
 		addWindowListener(new WindowAdapter() {
@@ -110,11 +106,11 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		//Default List (Contains only 'All' element, and no user)//
 		userListModel.addElement("All");
-
+		userListBox = new JList(userListModel);	
+		 
 		
-		userListBox = new JList(userListModel);
-		
-		/* Listenener for the userListBox
+		/***
+		 * Listener for the userListBox
 		 * If certain element is selected, sets the receiverField to that value.
 		 * Updates String selectedUser, int selectedIndex: for later sending message.
 		 */
@@ -179,6 +175,10 @@ public class Client_Main extends JFrame implements ActionListener {
 		setVisible(true);
 	}
 	
+	/***
+	 * listener for Client_Main 
+	 * listens for connectButton, sendButton
+	 */
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() == connectButton){
 			AbstractButton abstractButton = (AbstractButton) e.getSource();
@@ -218,8 +218,6 @@ public class Client_Main extends JFrame implements ActionListener {
 			//display message
 			if(selectedIndex!=0)
 				displayMessage(userName,userID,selectedUser,msg);
-			//chatArea.append(userName+"["+userID+"]"+"  >>  "+selectedUser+": ");
-			//chatArea.append(msg+"\n");
 			
 			//selectedIndex, selectedUser
 			//send message to server
@@ -229,12 +227,16 @@ public class Client_Main extends JFrame implements ActionListener {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-			chatArea.append("Successfully sent to server.\n");
+			//chatArea.append("Successfully sent to server.\n");
 			
 		}
 		
 	}
 	
+	/***
+	 * disables GUI (userListBox, chatArea, messageArea, sendButton)
+	 * used when Server is not yet connected.
+	 */
 	private void disableGUI(){
 		userListBox.setOpaque(false);
 		chatArea.setOpaque(false);
@@ -246,6 +248,10 @@ public class Client_Main extends JFrame implements ActionListener {
 
 	}
 	
+	/***
+	 * enables GUI (userListBox, chatArea, messageArea, sendButton)
+	 * used when Server is connected.
+	 */
 	private void enableGUI(){
 		userListBox.setOpaque(true);
 		chatArea.setOpaque(true);
@@ -257,7 +263,13 @@ public class Client_Main extends JFrame implements ActionListener {
 
 	}
 	
-	//Creates MenuBar
+	/***
+	 * creates menuBar in the main Client GUI
+	 * Menu implemented:
+	 * Access: Exit, Config: Connection Config, User Config, Help: How to, About
+ 	 * Listeners for menu bars are implemented anonymously (Functionality trivial)
+	 * @return JMenuBar
+	 */
 	private JMenuBar createMenuBar() {
 
 		JMenuBar menuBar = new JMenuBar();
@@ -306,7 +318,6 @@ public class Client_Main extends JFrame implements ActionListener {
 					public void actionPerformed(ActionEvent d) {
 						userName = uconfig.nameField.getText();
 						uconfig.dispose();
-						//chatArea.append("Changed userName to : "+userName+"\n");
 						
 						try {
 							Data a = new Data(1,userName,userID);
@@ -314,7 +325,7 @@ public class Client_Main extends JFrame implements ActionListener {
 						} catch (IOException e1) {
 							e1.printStackTrace();
 						}
-						chatArea.append("Update userName: Successfully sent to server.\n");
+						//chatArea.append("Update userName: Successfully sent to server.\n");
 						
 					}
 				});
@@ -346,24 +357,48 @@ public class Client_Main extends JFrame implements ActionListener {
 		return menuBar;
 	}
 
+	/***
+	 * sets Port Number
+	 * @param num
+	 */
 	static void setPortNum(int num){
 		portNum=num;
 	}
+	/***
+	 * sets IP Address
+	 * @param addr
+	 */
 	static void setIPAddress(String addr){
 		ipAddress=addr;
 	}
 	
+	/***
+	 * Starts Client.
+	 * This class implements a thread that listens for Data Objects from the Server
+	 * @author 임성수
+	 *
+	 */
 	class StartClient implements Runnable {
 		private int portNum;
 		private String ipAddress;
 		private LinkedList<User> uList;
 		
+		
+		/**
+		 * constructor of StartClient
+		 * @param address
+		 * @param num
+		 */
 		public StartClient(String address, int num){
 			this.ipAddress = address;
 			this.portNum = num;
 			this.uList = new LinkedList<User>();
 		}
 		
+		/**
+		 * run()
+		 * Connects to the designated port and listens for Data
+		 */
 		public void run(){
 			
         	try {
@@ -383,10 +418,6 @@ public class Client_Main extends JFrame implements ActionListener {
 				
 				// Create an input stream to receive data from the server
 				inputFromServer = new ObjectInputStream(socket.getInputStream());
-			    
-				//Create a new thread
-		        //ListeningThread task = new ListeningThread(inputFromServer);
-				//new Thread(task).start();
 				
       		}
         	catch(IOException ex){
@@ -399,11 +430,9 @@ public class Client_Main extends JFrame implements ActionListener {
         	try{
         		while (isConnected) {
 		        	Data object = (Data) inputFromServer.readObject();
-					
-		        	if(object.getUserList()!=null)
-		        		chatArea.append("MsgType: "+object.getType()+"\n");
+		        	//chatArea.append("MsgType: "+object.getType()+"\n");
 		        	
-		        	//Process for different message types
+		        	//Process different message types accordingly
 		        	processMessageClient(object);
 
         		}
@@ -438,9 +467,21 @@ public class Client_Main extends JFrame implements ActionListener {
 				}
         	}
 		}
+		/**
+		 * process Messages appropriately for different types
+		 * 
+		 * 0: normal communication (Client sends message to another Client)
+		 * 1: update userList (Server requests Client to update UserList
+		 * 2: receive unique ID and current online UserList from Server
+		 * 3: receives connection termination signal from server
+		 * 4: Server announces newly connected User. 
+		 * 5: Server announces newly disconnected User.
+		 * @param data
+		 */
 		private void processMessageClient(Data data){
 			switch (data.getType()){
 				case 0://normal communication
+					//chatArea.append("Message received.\n");
 					displayMessage(data.getfromName(),data.getfromID(),data.gettoNameIDString(),data.getMessage());
 					break;
 			
@@ -451,25 +492,25 @@ public class Client_Main extends JFrame implements ActionListener {
 					break;
 				case 2:	//get ID, receive current UserList
 	        		userID = data.getfromID();
-	        		chatArea.append("Welcome to SSChat!\n");
+	        		chatArea.append("\n\nWelcome to SSChat!\n\n");
 	        		chatArea.append("Your username is: "+userName+"\n");
-	        		chatArea.append("Your ID is: ["+userID+"]\n");
+	        		chatArea.append("Your ID is: ["+userID+"]\n\n");
 	        		uList = data.getUserList();
 	        		updateUserListDisplay(uList);
 
 					break;
 				case 3://terminate connection
 					isConnected=false;
-					chatArea.append("Received Terminating signal from Server.\n");
+					//chatArea.append("Received Terminating signal from Server.\n");
 					break;
-				case 4: //receive new connected user info
+				case 4: //receive newly connected user info
 					chatArea.append(data.getfromName()+"["+data.getfromID()+"] is online.\n");
 					User u = new User(data.getfromName(),data.getfromID());
 					uList.add(u);
 	        		updateUserListDisplay(uList);
 
 					break;
-				case 5: //receive new disconnected user info
+				case 5: //receive newly disconnected user info
 					chatArea.append(data.getfromName()+"["+data.getfromID()+"] is offline.\n");
 					int index=-1;
 					for(int i=0; i< uList.size();i++){
@@ -497,7 +538,6 @@ public class Client_Main extends JFrame implements ActionListener {
 			String oldName="";
 			for(int i=0; i<uList.size();i++){
 				if(uList.get(i).getUserID() == id){
-					//chatArea.append("Found Match: "+i+"\n");
 					oldName = uList.get(i).getUserName();
 					uList.get(i).setUserName(newName);
 				}
@@ -511,7 +551,10 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		
 		
-		
+		/**
+		 * updates UserList Display
+		 * @param list
+		 */
 		private void updateUserListDisplay(LinkedList<User> list){
 			userNum=list.size();
 			numUserField.setText("("+userNum+")");

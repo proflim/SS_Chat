@@ -12,7 +12,11 @@ import javax.swing.JPanel;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-
+/**
+ * UserConfig Class
+ * @author ÀÓ¼º¼ö
+ *
+ */
 public class UserConfig extends JDialog{
 	
 	private JPanel Panel_Main = new JPanel();
@@ -21,7 +25,11 @@ public class UserConfig extends JDialog{
 	private JTextArea chatArea;
 	private String newName;
 	
-	
+	/**
+	 * Constructor for UserConfig 
+	 * @param jta jtextarea
+	 * @param name name
+	 */
 	public UserConfig(JTextArea jta, String name){
 		this.chatArea = jta;
 		
@@ -41,25 +49,23 @@ public class UserConfig extends JDialog{
 		
 		setVisible(true);
 	}
-/*
-	public void actionPerformed(ActionEvent e) {
-		
-		//If done is pressed, updates portNum value (if it is a valid value)
-		if(e.getSource() == doneButton){
-			newName = nameField.getText();
-			chatArea.append("Changed userName to: "+newName+"\n");
-			dispose();
-		}
-		
-	}
-	*/
+
 	
-	//Validity Check on modified PortNumField: Checks if the value is an integer
+	/**
+	 * Validity Check on textField
+	 * checks if the textfield value is an integer
+	 * @param text
+	 * @return
+	 */
 	private boolean checkValidNum( String text ){
 		return text.matches("\\d*");
 		
 	}
 	
+	/**
+	 * Getter for newName
+	 * @return
+	 */
 	String getNewName(){
 		return newName;
 	}

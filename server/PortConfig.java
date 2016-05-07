@@ -16,6 +16,11 @@ import javax.swing.JTextField;
 
 import server.Server_Main;
 
+/**
+ * PortConfig GUI
+ * @author ÀÓ¼º¼ö
+ *
+ */
 public class PortConfig extends JDialog implements ActionListener{
 	
 	private JPanel Panel_Main = new JPanel();
@@ -23,7 +28,11 @@ public class PortConfig extends JDialog implements ActionListener{
 	private JButton doneButton = new JButton("Done");
 	private JTextArea chatArea;
 	
-	
+	/**
+	 * Constructor for PortConfig GUI
+	 * @param jta
+	 * @param portnum
+	 */
 	public PortConfig(JTextArea jta, int portnum){
 		this.chatArea = jta;
 		
@@ -44,6 +53,9 @@ public class PortConfig extends JDialog implements ActionListener{
 		setVisible(true);
 	}
 
+	/**
+	 * Listener for PortConfig GUI
+	 */
 	public void actionPerformed(ActionEvent e) {
 		
 		//If done is pressed, updates portNum value (if it is a valid value)
@@ -63,7 +75,13 @@ public class PortConfig extends JDialog implements ActionListener{
 		
 	}
 	
-	//Validity Check on modified PortNumField: Checks if the value is an integer
+	
+	/**
+	 * Validity Check on textField
+	 * checks if the textfield value is an integer
+	 * @param text
+	 * @return
+	 */
 	private boolean checkValidNum( String text ){
 		return text.matches("\\d*");
 		
