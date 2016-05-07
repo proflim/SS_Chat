@@ -6,8 +6,8 @@ import java.net.Socket;
 public class User implements java.io.Serializable{
 	private String userName;
 	private int userID;
-	private transient Socket clientSocket;
-	private transient ObjectOutputStream outputToClient;
+	private transient Socket clientSocket=null;
+	private transient ObjectOutputStream outputToClient=null;
 	
 	public User(String name, int id, Socket cSocket, ObjectOutputStream os){
 	
@@ -15,6 +15,11 @@ public class User implements java.io.Serializable{
 		this.userID = id;
 		this.clientSocket = cSocket;
 		this.outputToClient = os;
+	}
+	
+	public User(String name, int id){
+		this.userName = name;
+		this.userID = id;
 	}
 	
 	public void setUserName(String name){

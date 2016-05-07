@@ -48,7 +48,7 @@ public class Server_Main extends JFrame implements ActionListener{
 	private ServerSocket serverSocket;
 	private static int userNum;
 	private static int counterID=1;
-	private static LinkedList<User> userList;
+	private static final LinkedList<User> userList= new LinkedList<User>();
 	
 
 	
@@ -74,7 +74,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		//Initialize variables
 		portNum=8888;
 		userNum=0;
-		userList = new LinkedList<User>();
+		//userList = new LinkedList<User>();
 		
 		//OnlineUserList Panel
 		Panel_OnlineUserList.setPreferredSize(new Dimension(200, 300));
@@ -116,6 +116,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		Panel_Function_Top.add(new JLabel("  Send To:    "));
 		
 		receiverField = new JTextField();	//Need to get the selected value of online users
+		receiverField.setOpaque(false);
 		Panel_Function_Top.add(receiverField);
 		Panel_Function_Top.add(Box.createRigidArea(new Dimension(387,10)));
 
@@ -137,6 +138,9 @@ public class Server_Main extends JFrame implements ActionListener{
 		Pane_Top = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, Panel_OnlineUserList, Panel_Chat);
 		Pane_Whole = new JSplitPane(JSplitPane.VERTICAL_SPLIT, Pane_Top, Panel_Function);
 		getContentPane().add(Pane_Whole);
+		
+		//disable certain GUI features, since the server has not started yet.
+		disableGUI();
 		
 		setVisible(true); 
 
@@ -171,8 +175,26 @@ public class Server_Main extends JFrame implements ActionListener{
 	        }
 		}
         
-        
-		
+	}
+	private void disableGUI(){
+		userListBox.setOpaque(false);
+		chatArea.setOpaque(false);
+		messageArea.setOpaque(false);
+		sendButton.setEnabled(false);
+		Pane_UserListBox.repaint();
+		Pane_ChatArea.repaint();
+		Panel_Function_Center.repaint();
+	}
+	
+	private void enableGUI(){
+		userListBox.setOpaque(true);
+		chatArea.setOpaque(true);
+		messageArea.setOpaque(true);
+		sendButton.setEnabled(true);
+		Pane_UserListBox.repaint();
+		Pane_ChatArea.repaint();
+		Panel_Function_Center.repaint();
+
 	}
 	
 	//Creates MenuBar 
@@ -282,7 +304,7 @@ public class Server_Main extends JFrame implements ActionListener{
 				System.out.println(portNum);
 				serverSocket = new ServerSocket(portNum);
 				chatArea.append("Server started at "+ new Date() + "\n");
-				
+				enableGUI();
 				while (true){
 					//Listen for a connection request
 					Socket socket = serverSocket.accept();
@@ -307,10 +329,11 @@ public class Server_Main extends JFrame implements ActionListener{
 				
 			} catch (IOException e) {
 				// TODO Close Connection Gracefully. 
-				e.printStackTrace();
+				//e.printStackTrace();
 				//Close input/output streams, close socket.
 				chatArea.append("Server ended at "+ new Date() + "\n");
-				
+				disableGUI();
+				resetUserListDisplay();
 			}
 		}
 
@@ -370,25 +393,29 @@ public class Server_Main extends JFrame implements ActionListener{
 			        	//Pass unique ID and userList to the new user, 
 			        	//and Announce new user to other users
 			        	chatArea.append("sendingUserListSize: "+userList.size()+"\n");
+			        	LinkedList<User> uList = userList;
 			        	for(User u: userList){
 			        		if(u.getUserID()==userID){
-			        			Data d = new Data(2, userID, userList);
-			        			u.getOutputStream().writeObject(d);
-					        	chatArea.append("newUser: "+userList.size()+"\n");
-
+			        			Data d1 = new Data(2, userID, uList);
+			        			u.getOutputStream().writeObject(d1);
+			        			u.getOutputStream().flush();
+					        	chatArea.append("newUser["+u.getUserID()+"]: "+uList.size()+"\n");
+					        
 			        		}
 			        		else{
-				        		Data d = new Data(4, userID, s, userList);
-			        			u.getOutputStream().writeObject(d);
-					        	chatArea.append("otherUser: "+userList.size()+"\n");
+				        		Data d2 = new Data(4, userName,userID, s, uList);
+			        			u.getOutputStream().writeObject(d2);
+			        			u.getOutputStream().flush();
+					        	chatArea.append("otherUser["+u.getUserID()+"]: "+uList.size()+"\n");
 
 			        		}
+			        		
 			        	}
 			        	isFirstTransmission=false;
 		        	}
 		        	
 		        	//Process for different message types
-		        	//Exception in Case 3 (Terminate Connection)
+		        	//Exception in Case 3 (Terminate Connection immediately)
 		        	if(object.getType()==3){
 		        		break;
 		        	}
@@ -405,12 +432,13 @@ public class Server_Main extends JFrame implements ActionListener{
 	    		System.err.println(e);
 			}
 		    catch(IOException e) {
+		    	e.printStackTrace();
 		    	System.err.println("Error here");
 	    		System.err.println(e);
 		    }
 			finally{
 				if(counter>0){
-	        		String s = "User "+userName+" has disconnected.\n";
+	        		String s = "User "+userName+"["+userID+"] has disconnected.\n";
 					chatArea.append(s);
 					int index=-1;
 	        		for(int i = 0; i<userList.size();i++){
@@ -423,9 +451,10 @@ public class Server_Main extends JFrame implements ActionListener{
 	        		
 	        		chatArea.append("userList size: "+userList.size()+"\n");
 	        		for(User u: userList){
-		        		Data d = new Data(5, userID, s, userList);
+		        		Data d = new Data(5, userName,userID, s, userList);
 		        		try {
 							u.getOutputStream().writeObject(d);
+							u.getOutputStream().flush();
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -486,10 +515,14 @@ public class Server_Main extends JFrame implements ActionListener{
 		userListModel.addElement("All");
 		//Add elements to display
 		for(User a : userList) {
-			userListModel.addElement(a.getUserName());
+			userListModel.addElement(a.getUserName()+"["+a.getUserID()+"]");
 		}
-		
-		
+	}
+	private void resetUserListDisplay(){
+		userNum=0;
+		numUserField.setText("("+userNum+")");
+		userListModel.removeAllElements();
+		userListModel.addElement("All");
 	}
 
 

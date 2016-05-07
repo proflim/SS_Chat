@@ -53,8 +53,9 @@ public class Data implements java.io.Serializable {
 	  }
 	  
 	  //Announce new connection/disconnection
-	  public Data(int t, int fid, String msg, LinkedList<User> list){
+	  public Data(int t, String fname, int fid, String msg, LinkedList<User> list){
 		  this.type = t;
+		  this.fromName = fname;
 		  this.fromID = fid;
 		  this.message = msg;
 		  this.userList=list;

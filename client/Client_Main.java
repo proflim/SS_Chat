@@ -2,6 +2,7 @@ package client;
 
 import server.About;
 
+
 import java.io.*;
 import java.net.*;
 import java.util.Date;
@@ -122,7 +123,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		Panel_Function_Top.add(new JLabel("  Send To:    "));
 		receiverField = new JTextField();
-		
+		receiverField.setOpaque(false);
 		Panel_Function_Top.add(receiverField);
 		Panel_Function_Top.add(Box.createRigidArea(new Dimension(387,10)));
 
@@ -145,10 +146,12 @@ public class Client_Main extends JFrame implements ActionListener {
 		Pane_Whole = new JSplitPane(JSplitPane.VERTICAL_SPLIT, Pane_Top, Panel_Function);
 		getContentPane().add(Pane_Whole);
 		
+		//disable certain GUI features, since the client has not connected yet.
+		disableGUI();
+
+
+		
 		setVisible(true);
-
-
-
 	}
 	
 	public void actionPerformed(ActionEvent e) {
@@ -179,10 +182,33 @@ public class Client_Main extends JFrame implements ActionListener {
 					}
 		        	isConnected=false;
 					chatArea.append("You have logged off at "+new Date()+"\n");
+
 	        	}
 	        }
 		}
 		
+	}
+	
+	private void disableGUI(){
+		userListBox.setOpaque(false);
+		chatArea.setOpaque(false);
+		messageArea.setOpaque(false);
+		sendButton.setEnabled(false);
+		Pane_UserListBox.repaint();
+		Pane_ChatArea.repaint();
+		Panel_Function_Center.repaint();
+
+	}
+	
+	private void enableGUI(){
+		userListBox.setOpaque(true);
+		chatArea.setOpaque(true);
+		messageArea.setOpaque(true);
+		sendButton.setEnabled(true);
+		Pane_UserListBox.repaint();
+		Pane_ChatArea.repaint();
+		Panel_Function_Center.repaint();
+
 	}
 	
 	//Creates MenuBar
@@ -272,11 +298,12 @@ public class Client_Main extends JFrame implements ActionListener {
 	class StartClient implements Runnable {
 		private int portNum;
 		private String ipAddress;
-
+		private LinkedList<User> uList;
 		
 		public StartClient(String address, int num){
 			this.ipAddress = address;
 			this.portNum = num;
+			this.uList = new LinkedList<User>();
 		}
 		
 		public void run(){
@@ -286,6 +313,7 @@ public class Client_Main extends JFrame implements ActionListener {
 			
 				socket = new Socket(ipAddress, portNum);
 				chatArea.append("You have logged in at "+new Date()+"\n");
+				enableGUI();
 				isConnected=true;
 				
 				// Create an output stream to send data to the server
@@ -301,44 +329,50 @@ public class Client_Main extends JFrame implements ActionListener {
 				//Create a new thread
 		        //ListeningThread task = new ListeningThread(inputFromServer);
 				//new Thread(task).start();
-
+				
       		}
-      		catch (IOException ex) {
-      			chatArea.append(ex.toString() + '\n');
-      	    }
+        	catch(IOException ex){
+      			chatArea.append("Connection refused.\n");
+      			chatArea.append("Server is not available.\n");
+
+        	}
         	
+    		
         	try{
-				while (isConnected) {
+        		while (isConnected) {
 		        	Data object = (Data) inputFromServer.readObject();
+					
 		        	if(object.getUserList()!=null)
-		        		chatArea.append("Msg: "+object.getType()+" "+object.getUserList().size()+"\n");
+		        		chatArea.append("MsgType: "+object.getType()+"\n");
+		        	
 		        	//Process for different message types
 		        	processMessageClient(object);
 		        	
 		        	//Update UserListDisplay
-		        	if(object.getUserList()!=null)
-		        		updateUserListDisplay(object.getUserList());
-		        	
-		        }
+		        	//if(object.getUserList()!=null)
+		        		//updateUserListDisplay(object.getUserList());
+        		}
         	}
         	catch(ClassNotFoundException e){
 				//e.printStackTrace();
 	    		System.err.println(e);
 	    		e.printStackTrace();
 			}
-		    catch(IOException e) {
+      		catch (IOException ex) {
 		    	System.out.println("Ignore IOException");
-		    }
-			finally{
+      	    }
+        	finally{
 		        try {
 					outputToServer.close();
 			        inputFromServer.close();
 			        socket.close();
 			        System.out.println("Stopped Listening");
+			        disableGUI();
+			        resetUserListDisplay();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
+        	}
 		}
 		private void processMessageClient(Data data){
 			switch (data.getType()){
@@ -349,24 +383,33 @@ public class Client_Main extends JFrame implements ActionListener {
 				case 1:
 					
 					break;
-				case 2:
+				case 2:	//get ID, receive current UserList
 	        		userID = data.gettoID();
-	        		chatArea.append("Your ID is: "+userID+"\n");
+	        		chatArea.append("Your ID is: ["+userID+"]\n");
+	        		uList = data.getUserList();
+	        		updateUserListDisplay(uList);
+
 					break;
 				case 3:
 					
 					break;
-				case 4:
-	        		//chatArea.append(data.getMessage());
-					chatArea.append(data.getfromID()+" is online.\n");
-					chatArea.append("userList Size: "+data.getUserList().size()+"\n");
-					for(User u : data.getUserList()){
-						chatArea.append("userList contains: "+u.getUserID()+"\n");
-					}
+				case 4: //receive new connected user info
+					chatArea.append(data.getfromName()+"["+data.getfromID()+"] is online.\n");
+					User u = new User(data.getfromName(),data.getfromID());
+					uList.add(u);
+	        		updateUserListDisplay(uList);
 
 					break;
-				case 5:
-					chatArea.append(data.getMessage());
+				case 5: //receive new disconnected user info
+					chatArea.append(data.getfromName()+"["+data.getfromID()+"] is offline.\n");
+					int index=-1;
+					for(int i=0; i< uList.size();i++){
+						if((uList.get(i).getUserID())==data.getfromID()){
+							index=i;
+						}
+					}
+					uList.remove(index);
+	        		updateUserListDisplay(uList);
 					break;
 				default:
 						
@@ -381,8 +424,14 @@ public class Client_Main extends JFrame implements ActionListener {
 			userListModel.addElement("All");
 			//Add elements in 
 			for(User a : list) {
-				userListModel.addElement(a.getUserName());
+				userListModel.addElement(a.getUserName()+"["+a.getUserID()+"]");
 			}
+		}
+		private void resetUserListDisplay(){
+			userNum=0;
+			numUserField.setText("("+userNum+")");
+			userListModel.removeAllElements();
+			userListModel.addElement("All");
 		}
 	}
 	
