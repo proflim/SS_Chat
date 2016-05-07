@@ -18,12 +18,14 @@ import server.Server_Main;
 
 public class PortConfig extends JDialog implements ActionListener{
 	
-	JPanel Panel_Main = new JPanel();
-	JTextField PortNumField;
-	JButton doneButton = new JButton("Done");
-	JTextArea jta;
-	public PortConfig(JTextArea jta){
-		this.jta = jta;
+	private JPanel Panel_Main = new JPanel();
+	private JTextField PortNumField;
+	private JButton doneButton = new JButton("Done");
+	private JTextArea chatArea;
+	
+	
+	public PortConfig(JTextArea jta, int portnum){
+		this.chatArea = jta;
 		
 		setTitle("Port Configuration");
 		setSize(300,80);
@@ -32,7 +34,7 @@ public class PortConfig extends JDialog implements ActionListener{
 		Panel_Main.setLayout(new FlowLayout(FlowLayout.LEADING, 10, 10));
 		Panel_Main.add(new JLabel(" Select Port: "));
 		
-		PortNumField = new JTextField();
+		PortNumField = new JTextField(Integer.toString(portnum));
 		PortNumField.setPreferredSize(new Dimension(90,20));
 		Panel_Main.add(PortNumField);
 		doneButton.addActionListener(this);
@@ -49,7 +51,7 @@ public class PortConfig extends JDialog implements ActionListener{
 			if(checkValidNum(PortNumField.getText())){
 				int num = Integer.parseInt(PortNumField.getText());
 				Server_Main.setPortNum(num);
-				jta.append("Server Port changed to: "+Server_Main.getPortNum()+"\n");
+				chatArea.append("Server Port changed to: "+num+"\n");
 				dispose();
 			}
 			else{

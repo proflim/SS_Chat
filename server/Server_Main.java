@@ -216,20 +216,6 @@ public class Server_Main extends JFrame implements ActionListener{
 		JMenu Access = (JMenu) menuBar.add(new JMenu("Access"));
 		Access.setMnemonic('A');
 		
-		mi = (JMenuItem) Access.add(new JMenuItem("Logout"));	
-		mi.setMnemonic('L');
-		mi.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				int ans = JOptionPane.showConfirmDialog(null, "Do you wish to Logout? \n(This will terminate the server as well)",
-						"Confirm", JOptionPane.YES_NO_OPTION);
-				if (ans == JOptionPane.YES_OPTION){
-					dispose();
-					LoginDialog loginDialog = new LoginDialog();
-
-					return;	
-				}
-			}
-		});
 		
 		mi = (JMenuItem) Access.add(new JMenuItem("Exit"));
 		mi.setMnemonic('E');
@@ -251,7 +237,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		mi.setMnemonic('P');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				PortConfig portconfig = new PortConfig(chatArea);
+				PortConfig portconfig = new PortConfig(chatArea, portNum);
 			}
 		});
 
@@ -261,7 +247,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		mi = (JMenuItem) Help.add(new JMenuItem("How to.."));
 		mi.setMnemonic('H');
 		mi.addActionListener(new ActionListener() {	
-			public void actionPerformed(ActionEvent arg0) {
+			public void actionPerformed(ActionEvent e) {
 				ServerHowTo s_howto = new ServerHowTo();
 				
 			}
@@ -278,12 +264,10 @@ public class Server_Main extends JFrame implements ActionListener{
 		return menuBar;
 	}
 
-	public static void setPortNum(int num){
+	static void setPortNum(int num){
 		portNum=num;
 	}
-	public static int getPortNum(){
-		return portNum;
-	}
+
 	
 	class StartServer implements Runnable {
 		private int num;
@@ -294,7 +278,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		
 		public void run(){
 			try {
-				System.out.println(portNum);
+				chatArea.append("Opening server on Port "+portNum+"..\n");
 				serverSocket = new ServerSocket(portNum);
 				chatArea.append("Server started at "+ new Date() + "\n");
 				enableGUI();
@@ -360,7 +344,6 @@ public class Server_Main extends JFrame implements ActionListener{
 		private String userName;
 		private int counter =1;
 		private boolean isFirstTransmission;
-		//private LinkedList<User> userList;
 
 		
 		public ClientListeningThread(Socket socket, ObjectInputStream is, ObjectOutputStream os, int ID){
@@ -374,6 +357,9 @@ public class Server_Main extends JFrame implements ActionListener{
 			
 			//After assigning ID, increment ID
 			counterID++;
+		}
+		public void changeUserName(String newName){
+			this.userName = newName;
 		}
 		
 		public void run() {
@@ -425,16 +411,17 @@ public class Server_Main extends JFrame implements ActionListener{
 			        	}
 			        	isFirstTransmission=false;
 		        	}
-		        	
-		        	//Process for different message types
-		        	//Exception in Case 3 (Terminate Connection immediately)
-		        	if(object.getType()==3){
-		        		break;
-		        	}
 		        	else{
-		        		processMessageServer(object);
-		        	}
 		        	
+			        	//Process for different message types
+			        	//Exception in Case 3 (Terminate Connection immediately)
+			        	if(object.getType()==3){
+			        		break;
+			        	}
+			        	else{
+			        		processMessageServer(object);
+			        	}
+		        	}
 		        	updateUserListDisplay();
 		        }
 		        
@@ -491,53 +478,80 @@ public class Server_Main extends JFrame implements ActionListener{
 				}
 			}
 		}
-	}
-	
-	
-	private void processMessageServer(Data data){
-		switch (data.getType()){
-			case 0: //normal communication
-				//display message
-				displayMessage(data.getfromName(),data.getfromID(),data.gettoNameIDString(),data.getMessage());
-				
-				try{
-					if(data.gettoIndex()==0){//send to All
-						for(User u: userList){
-							u.getOutputStream().writeObject(data);
+		private void processMessageServer(Data data){
+			switch (data.getType()){
+				case 0: //normal communication
+					
+					//display message
+					displayMessage(data.getfromName(),data.getfromID(),data.gettoNameIDString(),data.getMessage());
+					
+					try{
+						if(data.gettoIndex()==0){//send to All
+							for(User u: userList){
+								u.getOutputStream().writeObject(data);
+							}
+						}
+						else{//sent to specific Client
+							userList.get(data.gettoIndex()-1).getOutputStream().writeObject(data);
 						}
 					}
-					else{//sent to specific Client
-						userList.get(data.gettoIndex()-1).getOutputStream().writeObject(data);
+					catch(IOException e){
+						e.printStackTrace();
+						chatArea.append("Deliver Message: Unsuccessfully sent to client.\n");
 					}
-				}
-				catch(IOException e){
-					e.printStackTrace();
-					chatArea.append("Unsuccessfully sent to client.\n");
-				}
-				chatArea.append("Successfully sent to client.\n");
-				break;
-		
-			case 1://update username
-				
-				break;
-			case 2:
-				/////
-				break;
-			case 3:
-				/////
-				break;
-			case 4:
-        		/////
-				break;
-			case 5:
-				/////
-				break;
-			default:
+					chatArea.append("Deliver Message: Successfully sent to client.\n");
+					break;
+			
+				case 1://update username
 					
-				break;
+					//change username of current listening thread
+					changeUserName(data.getfromName());
+					
+					//updateUserList on server 
+					updateUserList(data.getfromName(), data.getfromID());
+					
+
+					updateUserListDisplay();
+					
+					// Send updateUserList Request to all users 
+					try{
+						for(int i =0; i<userList.size(); i++){
+							//Send to rest of the user (except himself)
+							Data d = new Data(1,data.getfromName(), data.getfromID());
+							//if(i!=indexOfUpdatedUser)
+								userList.get(i).getOutputStream().writeObject(data);
+						}
+
+					}
+					catch(IOException e){
+						e.printStackTrace();
+						chatArea.append("Update UserList: Unsuccessfully sent to client.\n");
+					}
+					chatArea.append("Update UserList: Successfully sent to client.\n");
+					
+					break;
+				
+				default:
+					chatArea.append("Something unexpected has happened. Please reboot. \n");
+					break;
+			}
 		}
+		
 	}
+
 	
+	private void updateUserList(String newName, int id){
+		
+		String oldName="";
+		for(int i=0; i<userList.size();i++){
+			if(userList.get(i).getUserID() == id){
+				chatArea.append("Found Match: "+i+"\n");
+				oldName = userList.get(i).getUserName();
+				userList.get(i).setUserName(newName);
+			}
+		}
+		chatArea.append("User ("+oldName+") changed name to ("+newName+")\n");
+	}
 	
 	private void updateUserListDisplay(){
 		//increment number of online users
@@ -572,10 +586,7 @@ public class Server_Main extends JFrame implements ActionListener{
 		chatArea.append(fromName+"["+fromID+"]"+"  >>  "+toNameIDString+": ");
 		chatArea.append(msg+"\n");
 	}
-	
-	void displayInfoinMain(String text){
-		chatArea.append(text+"\n");
-	}
+
 
 
 }

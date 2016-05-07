@@ -33,11 +33,20 @@ public class Data implements java.io.Serializable {
 		  this.message = msg;		  
 	  }
 	  
-	  //Notify/Update Username (Client -> Server)
+	  // Send initial Username (Client -> Server)
 	  public Data(int t, String fname){
 		  this.type = t;
 		  this.fromName = fname;
 	  }
+	  
+	  // Update UserName (Client -> Server)
+	  //Update UserList (Server -> Client)
+	  public Data(int t, String fname, int fid){
+		  this.type = t;
+		  this.fromName = fname;
+		  this.fromID = fid;
+	  }
+	  
 	  
 	  //Assign uniqueID (Server -> Client)
 	  public Data(int t, int fid, LinkedList<User> list){

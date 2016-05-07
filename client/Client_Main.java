@@ -7,6 +7,9 @@ import server.About;
 
 
 
+
+
+
 import java.io.*;
 import java.net.*;
 import java.util.Date;
@@ -65,6 +68,7 @@ public class Client_Main extends JFrame implements ActionListener {
 	private boolean isConnected;
 	private int selectedIndex;
 	private String selectedUser;
+	private UserConfig uconfig;
 	
 	public static void main(String[] args) {
 		new Client_Main();
@@ -192,9 +196,11 @@ public class Client_Main extends JFrame implements ActionListener {
 	        	
 	        	//Send Terminating Signal
 	        	if(isConnected){
-		        	Data d = new Data(3);
+		        	
 		        	try {
+		        		Data d = new Data(3);
 						outputToServer.writeObject(d);
+						
 					} catch (IOException e1) {
 						// TODO Auto-generated catch block
 						System.err.println("Exception when sending terminating signal to server.");
@@ -203,7 +209,6 @@ public class Client_Main extends JFrame implements ActionListener {
 					}
 		        	isConnected=false;
 					chatArea.append("You have logged off at "+new Date()+"\n");
-
 	        	}
 	        }
 		}
@@ -227,7 +232,6 @@ public class Client_Main extends JFrame implements ActionListener {
 			chatArea.append("Successfully sent to server.\n");
 			
 		}
-
 		
 	}
 	
@@ -264,20 +268,6 @@ public class Client_Main extends JFrame implements ActionListener {
 		JMenu Access = (JMenu) menuBar.add(new JMenu("Access"));
 		Access.setMnemonic('A');
 		
-		mi = (JMenuItem) Access.add(new JMenuItem("Logout"));	
-		mi.setMnemonic('L');
-		mi.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				int ans = JOptionPane.showConfirmDialog(null, "Do you wish to Logout? \n(This will terminate the server as well)",
-						"Confirm", JOptionPane.YES_NO_OPTION);
-				if (ans == JOptionPane.YES_OPTION){
-					dispose();
-					LoginDialog loginDialog = new LoginDialog();
-
-					return;	
-				}
-			}
-		});
 		
 		mi = (JMenuItem) Access.add(new JMenuItem("Exit"));
 		mi.setMnemonic('E');
@@ -295,10 +285,11 @@ public class Client_Main extends JFrame implements ActionListener {
 		JMenu Config = (JMenu) menuBar.add(new JMenu("Config"));
 		Config.setMnemonic('C');
 
-		mi = (JMenuItem) Config.add(new JMenuItem("Connect Config"));	
+		mi = (JMenuItem) Config.add(new JMenuItem("Connection Config"));	
 		mi.setMnemonic('C');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
+				ConnectionConfig cconfig = new ConnectionConfig(chatArea,portNum,ipAddress);
 
 			}
 		});
@@ -307,7 +298,26 @@ public class Client_Main extends JFrame implements ActionListener {
 		mi.setMnemonic('U');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-
+				uconfig = new UserConfig(chatArea,userName);
+				
+				//When uconfig.doneButton is pressed, set new UserName 
+				
+				uconfig.doneButton.addActionListener(new ActionListener() {
+					public void actionPerformed(ActionEvent d) {
+						userName = uconfig.nameField.getText();
+						uconfig.dispose();
+						//chatArea.append("Changed userName to : "+userName+"\n");
+						
+						try {
+							Data a = new Data(1,userName,userID);
+							outputToServer.writeObject(a);
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
+						chatArea.append("Update userName: Successfully sent to server.\n");
+						
+					}
+				});
 			}
 		});
 		
@@ -315,7 +325,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		JMenu Help = (JMenu) menuBar.add(new JMenu("Help"));
 		Help.setMnemonic('H');
 
-		//if user is not admin
+		
 		mi = (JMenuItem) Help.add(new JMenuItem("How to.."));
 		mi.setMnemonic('H');
 		mi.addActionListener(new ActionListener() {	
@@ -336,6 +346,12 @@ public class Client_Main extends JFrame implements ActionListener {
 		return menuBar;
 	}
 
+	static void setPortNum(int num){
+		portNum=num;
+	}
+	static void setIPAddress(String addr){
+		ipAddress=addr;
+	}
 	
 	class StartClient implements Runnable {
 		private int portNum;
@@ -352,7 +368,7 @@ public class Client_Main extends JFrame implements ActionListener {
 			
         	try {
         		// Create a socket to connect to the server
-			
+				chatArea.append("Connecting to server on Port "+portNum+"..\n");
 				socket = new Socket(ipAddress, portNum);
 				chatArea.append("You have logged in at "+new Date()+"\n");
 				enableGUI();
@@ -389,10 +405,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		        	
 		        	//Process for different message types
 		        	processMessageClient(object);
-		        	
-		        	//Update UserListDisplay
-		        	//if(object.getUserList()!=null)
-		        		//updateUserListDisplay(object.getUserList());
+
         		}
         	}
         	catch(ClassNotFoundException e){
@@ -401,13 +414,18 @@ public class Client_Main extends JFrame implements ActionListener {
 	    		e.printStackTrace();
 			}
       		catch (IOException ex) {
-				//e.printStackTrace();
+				//ex.printStackTrace();
       	    }
         	finally{
 		        try {
+		        	//Check if socket has been initialized
+		        	//If not, then server connection hasn't been established.
+		        	//Just quit.
+		        	if(socket!=null){
 					outputToServer.close();
 			        inputFromServer.close();
 			        socket.close();
+		        	}
 			        chatArea.append("Disconnected from server at "+new Date()+"\n");
 			        if(connectButton.isSelected()){
 			        	connectButton.setSelected(false);
@@ -426,8 +444,10 @@ public class Client_Main extends JFrame implements ActionListener {
 					displayMessage(data.getfromName(),data.getfromID(),data.gettoNameIDString(),data.getMessage());
 					break;
 			
-				case 1://change username
+				case 1://update username in userList
 					
+					updateUserListClient(data.getfromName(), data.getfromID());
+	        		updateUserListDisplay(uList);
 					break;
 				case 2:	//get ID, receive current UserList
 	        		userID = data.getfromID();
@@ -466,6 +486,32 @@ public class Client_Main extends JFrame implements ActionListener {
 			}
 		}
 		
+		/***
+		 * Updates UserList in the Client (for all clients)
+		 * @param newName
+		 * @param id
+		 * @param idx
+		 */
+		private void updateUserListClient(String newName, int id){
+			
+			String oldName="";
+			for(int i=0; i<uList.size();i++){
+				if(uList.get(i).getUserID() == id){
+					//chatArea.append("Found Match: "+i+"\n");
+					oldName = uList.get(i).getUserName();
+					uList.get(i).setUserName(newName);
+				}
+			}
+			if(id == userID)
+				chatArea.append("You changed name to ("+newName+")\n");
+			else
+				chatArea.append("User ("+oldName+") changed name to ("+newName+")\n");
+			
+		}
+		
+		
+		
+		
 		private void updateUserListDisplay(LinkedList<User> list){
 			userNum=list.size();
 			numUserField.setText("("+userNum+")");
@@ -499,5 +545,6 @@ public class Client_Main extends JFrame implements ActionListener {
 		chatArea.append(fromName+"["+fromID+"]"+"  >>  "+toNameIDString+": ");
 		chatArea.append(msg+"\n");
 	}
+	
 	
 }
