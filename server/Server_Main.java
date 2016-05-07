@@ -83,15 +83,14 @@ public class Server_Main extends JFrame implements ActionListener{
 		Panel_OnlineUserList_Top.setLayout(new FlowLayout());
 		Panel_OnlineUserList_Top.add(new JLabel("Online Users"));
 		numUserField = new JTextField("("+ userNum+")");
+		numUserField.setPreferredSize(new Dimension(30,25));
 		numUserField.setEditable(false);
 		Panel_OnlineUserList_Top.add(numUserField);
 		Panel_OnlineUserList.add(Panel_OnlineUserList_Top, BorderLayout.NORTH);
 		
 		//Dummy data//
 		userListModel.addElement("All");
-		userListModel.addElement("user1");
-		userListModel.addElement("user2");
-		userListModel.addElement("user3");
+		
 		
 		userListBox = new JList(userListModel);
 		Pane_UserListBox = new JScrollPane(userListBox);
@@ -288,16 +287,7 @@ public class Server_Main extends JFrame implements ActionListener{
 					//Listen for a connection request
 					Socket socket = serverSocket.accept();
 					chatArea.append("Received connection\n");
-					//increment number of online users
-					userNum++;
-					chatArea.append("Num of users online: "+userNum+"\n");
-					/*
-					InetAddress inetAddress = socket.getInetAddress();
-					chatArea.append("Client hostname: "+inetAddress.getHostName()+"\n");
-					chatArea.append("Client IPAddress: "+inetAddress.getHostAddress()+"\n");
-					chatArea.append("Client LocalPort: "+socket.getLocalPort()+"\n");
-					*/
-					
+										
 					
 			        // Create data input and output streams
 			        ObjectInputStream inputFromClient = new ObjectInputStream(
@@ -306,17 +296,18 @@ public class Server_Main extends JFrame implements ActionListener{
 			          socket.getOutputStream());
 			        
 			        //Add to User List
-					User u = new User("",counterID, socket, outputToClient);
+					User u = new User("--",counterID, socket, outputToClient);
 					userList.add(u);
 					
 					//Create a new thread
-			        ClientListeningThread task = new ClientListeningThread(inputFromClient, counterID);
+			        ClientListeningThread task = new ClientListeningThread(socket, inputFromClient, outputToClient, counterID);
+					//ClientListeningThread task = new ClientListeningThread(socket, counterID);
 					new Thread(task).start();
 				}
 				
 			} catch (IOException e) {
 				// TODO Close Connection Gracefully. 
-				//e.printStackTrace();
+				e.printStackTrace();
 				//Close input/output streams, close socket.
 				chatArea.append("Server ended at "+ new Date() + "\n");
 				
@@ -327,18 +318,24 @@ public class Server_Main extends JFrame implements ActionListener{
 	
 	//Define thread class for new client connection
 	class ClientListeningThread implements Runnable{
+		private Socket socket;
 		private ObjectInputStream inputFromClient;
+		private ObjectOutputStream outputToClient;
 		private int userID;
 		private String userName;
 		private int counter =1;
 		private boolean isFirstTransmission;
+		//private LinkedList<User> userList;
+
 		
-		
-		public ClientListeningThread(ObjectInputStream is, int ID){
+		public ClientListeningThread(Socket socket, ObjectInputStream is, ObjectOutputStream os, int ID){
 			
-			this.inputFromClient = is;
+			this.socket = socket;
 			this.userID = ID;
+			this.inputFromClient = is;
+			this.outputToClient = os;
 			this.isFirstTransmission=true;
+			//this.userList = list;
 			
 			//After assigning ID, increment ID
 			counterID++;
@@ -346,6 +343,8 @@ public class Server_Main extends JFrame implements ActionListener{
 		
 		public void run() {
 			try{
+
+				
 		        // Continuously listen to the client
 		        while (true) {
 		        	Data object = (Data) inputFromClient.readObject();
@@ -366,50 +365,133 @@ public class Server_Main extends JFrame implements ActionListener{
 			        			u.setUserName(userName);
 			        			//chatArea.append(userName+", "+userID);
 			        		}
-			        		
-			        		
 			        	}
-			        	
 			        	
 			        	//Pass unique ID and userList to the new user, 
 			        	//and Announce new user to other users
+			        	chatArea.append("sendingUserListSize: "+userList.size()+"\n");
 			        	for(User u: userList){
 			        		if(u.getUserID()==userID){
 			        			Data d = new Data(2, userID, userList);
 			        			u.getOutputStream().writeObject(d);
+					        	chatArea.append("newUser: "+userList.size()+"\n");
+
 			        		}
 			        		else{
-				        		Data d = new Data(4, s, userList);
+				        		Data d = new Data(4, userID, s, userList);
 			        			u.getOutputStream().writeObject(d);
-			        		}
+					        	chatArea.append("otherUser: "+userList.size()+"\n");
 
+			        		}
 			        	}
-			        	
 			        	isFirstTransmission=false;
 		        	}
 		        	
 		        	//Process for different message types
+		        	//Exception in Case 3 (Terminate Connection)
+		        	if(object.getType()==3){
+		        		break;
+		        	}
+		        	else{
+		        		processMessageServer(object);
+		        	}
 		        	
-		        	
+		        	updateUserListDisplay();
 		        }
+		        
 			}
 			catch(ClassNotFoundException e){
 				//e.printStackTrace();
 	    		System.err.println(e);
 			}
 		    catch(IOException e) {
+		    	System.err.println("Error here");
 	    		System.err.println(e);
 		    }
 			finally{
 				if(counter>0){
-					chatArea.append("User "+ userName + " has disconnected.\n");
-					userNum--;
-					System.out.println(userNum);
+	        		String s = "User "+userName+" has disconnected.\n";
+					chatArea.append(s);
+					int index=-1;
+	        		for(int i = 0; i<userList.size();i++){
+	        			if(userList.get(i).getUserID()==userID){
+	        				index =i;
+	        			}
+	        		}
+	        		userList.remove(index);
+	        		chatArea.append("Deleted userID: "+userID+"\n");
+	        		
+	        		chatArea.append("userList size: "+userList.size()+"\n");
+	        		for(User u: userList){
+		        		Data d = new Data(5, userID, s, userList);
+		        		try {
+							u.getOutputStream().writeObject(d);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+	        		}
+					
+					updateUserListDisplay();
+
+					try {
+						inputFromClient.close();
+						outputToClient.close();
+						socket.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					counter--;
 				}
 			}
 		}
 	}
+	
+	
+	private void processMessageServer(Data data){
+		switch (data.getType()){
+			case 0:
+				
+				break;
+		
+			case 1:
+				
+				break;
+			case 2:
+				/////
+				break;
+			case 3:
+				/////
+				break;
+			case 4:
+        		/////
+				break;
+			case 5:
+				/////
+				break;
+			default:
+					
+				break;
+		}
+	}
+	
+	
+	private void updateUserListDisplay(){
+		//increment number of online users
+		userNum=userList.size();
+		numUserField.setText("("+userNum+")");
+		
+		userListModel.removeAllElements();
+		userListModel.addElement("All");
+		//Add elements to display
+		for(User a : userList) {
+			userListModel.addElement(a.getUserName());
+		}
+		
+		
+	}
+
 
 }
 

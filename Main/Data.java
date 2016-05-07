@@ -52,11 +52,14 @@ public class Data implements java.io.Serializable {
 		  this.type=t;
 	  }
 	  
-	  public Data(int t, String msg, LinkedList<User> list){
+	  //Announce new connection/disconnection
+	  public Data(int t, int fid, String msg, LinkedList<User> list){
 		  this.type = t;
+		  this.fromID = fid;
 		  this.message = msg;
 		  this.userList=list;
 	  }
+	  
 	  
 	  public int getType(){
 		  return this.type;
@@ -80,6 +83,10 @@ public class Data implements java.io.Serializable {
 	  
 	  public String getMessage(){
 		  return this.message;
+	  }
+	  
+	  public LinkedList<User> getUserList(){
+		  return this.userList;
 	  }
 	  
 }

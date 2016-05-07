@@ -5,6 +5,7 @@ import server.About;
 import java.io.*;
 import java.net.*;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
 import java.awt.*;
 import java.awt.event.*;
@@ -14,6 +15,7 @@ import javax.swing.border.Border;
 
 import Main.Data;
 import Main.LoginDialog;
+import Main.User;
 import server.Server_Main;
 
 public class Client_Main extends JFrame implements ActionListener {
@@ -22,6 +24,7 @@ public class Client_Main extends JFrame implements ActionListener {
 	// IO streams
 	private ObjectOutputStream outputToServer;
 	private ObjectInputStream inputFromServer;
+	private Socket socket;
 
 	//////////////////////////////////////////////////////
 	private JPanel Panel_OnlineUserList = new JPanel();
@@ -36,7 +39,7 @@ public class Client_Main extends JFrame implements ActionListener {
 	private JSplitPane Pane_Top = new JSplitPane();
 	private JSplitPane Pane_Whole = new JSplitPane();
 	
-	private JTextField numUserField = new JTextField("(0)");
+	private JTextField numUserField;
 	private DefaultListModel userListModel = new DefaultListModel();
 	private JList userListBox;
 	private JScrollPane Pane_UserListBox = new JScrollPane();
@@ -51,6 +54,8 @@ public class Client_Main extends JFrame implements ActionListener {
 	private static String ipAddress;
 	private String userName;
 	private int userID;
+	private static int userNum;
+	private boolean isConnected;
 	
 	public static void main(String[] args) {
 		new Client_Main();
@@ -61,6 +66,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		setTitle("SSChat Client");
 		setSize(800, 500);
 		setResizable(false);
+		setLocation(300,100);
 
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
@@ -75,6 +81,7 @@ public class Client_Main extends JFrame implements ActionListener {
 		portNum = 8888;
 		ipAddress = "127.0.0.1";
 		userName = "hkuster";	//set default userName
+		isConnected=false;
 		
 		//OnlineUserList Panel
 		Panel_OnlineUserList.setPreferredSize(new Dimension(200, 300));
@@ -82,15 +89,15 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		Panel_OnlineUserList_Top.setLayout(new FlowLayout());
 		Panel_OnlineUserList_Top.add(new JLabel("Online Users"));
+		numUserField = new JTextField("("+userNum+")");
+		numUserField.setPreferredSize(new Dimension(30,25));
 		numUserField.setEditable(false);
 		Panel_OnlineUserList_Top.add(numUserField);
 		Panel_OnlineUserList.add(Panel_OnlineUserList_Top, BorderLayout.NORTH);
 		
 		//Dummy data//
 		userListModel.addElement("All");
-		userListModel.addElement("user1");
-		userListModel.addElement("user2");
-		userListModel.addElement("user3");
+
 		
 		userListBox = new JList(userListModel);
 		Pane_UserListBox = new JScrollPane(userListBox);
@@ -159,13 +166,19 @@ public class Client_Main extends JFrame implements ActionListener {
 	        else{
 	        	connectButton.setText("Connect");
 	        	
-	        	//End Server
-	        	//End connection with all thread (online users)
-	        	try{
-	        		
-	        	}
-	        	finally{
-	        		//socket.close();	
+	        	//Send Terminating Signal
+	        	if(isConnected){
+		        	Data d = new Data(3);
+		        	try {
+						outputToServer.writeObject(d);
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						System.err.println("Exception when sending terminating signal to server.");
+						e1.printStackTrace();
+						
+					}
+		        	isConnected=false;
+					chatArea.append("You have logged off at "+new Date()+"\n");
 	        	}
 	        }
 		}
@@ -259,6 +272,7 @@ public class Client_Main extends JFrame implements ActionListener {
 	class StartClient implements Runnable {
 		private int portNum;
 		private String ipAddress;
+
 		
 		public StartClient(String address, int num){
 			this.ipAddress = address;
@@ -270,12 +284,12 @@ public class Client_Main extends JFrame implements ActionListener {
         	try {
         		// Create a socket to connect to the server
 			
-				Socket socket = new Socket(ipAddress, portNum);
+				socket = new Socket(ipAddress, portNum);
 				chatArea.append("You have logged in at "+new Date()+"\n");
-				  
+				isConnected=true;
+				
 				// Create an output stream to send data to the server
 				outputToServer = new ObjectOutputStream(socket.getOutputStream());
-				
 				
 				//send username to server
 				Data d = new Data(1,userName);
@@ -283,54 +297,93 @@ public class Client_Main extends JFrame implements ActionListener {
 				
 				// Create an input stream to receive data from the server
 				inputFromServer = new ObjectInputStream(socket.getInputStream());
-			    //Create a new thread
-		        ListeningThread task = new ListeningThread(inputFromServer);
-				new Thread(task).start();
+			    
+				//Create a new thread
+		        //ListeningThread task = new ListeningThread(inputFromServer);
+				//new Thread(task).start();
+
       		}
       		catch (IOException ex) {
       			chatArea.append(ex.toString() + '\n');
       	    }
-		}
-	}
-	//Define thread class for new client connection
-	class ListeningThread implements Runnable{
-		private ObjectInputStream inputFromServer;
-		
-		
-		public ListeningThread(ObjectInputStream is){
-			
-			this.inputFromServer = is;
-		}
-		
-		public void run() {
-			try{
-		        // Continuously listen to the client
-		        while (true) {
+        	
+        	try{
+				while (isConnected) {
 		        	Data object = (Data) inputFromServer.readObject();
-		        	
+		        	if(object.getUserList()!=null)
+		        		chatArea.append("Msg: "+object.getType()+" "+object.getUserList().size()+"\n");
 		        	//Process for different message types
-		        	if(object.getType()==2){
-		        		userID = object.gettoID();
-		        		chatArea.append("Your ID is: "+userID+"\n");
-		        		
-		        		//Update UserList
-		        	}
-		        	else if (object.getType()==4){
-		        		chatArea.append(object.getMessage());
-		        		
-		        		//Update UserList
-		        	}
+		        	processMessageClient(object);
+		        	
+		        	//Update UserListDisplay
+		        	if(object.getUserList()!=null)
+		        		updateUserListDisplay(object.getUserList());
 		        	
 		        }
-			}
-			catch(ClassNotFoundException e){
+        	}
+        	catch(ClassNotFoundException e){
 				//e.printStackTrace();
 	    		System.err.println(e);
-
+	    		e.printStackTrace();
 			}
 		    catch(IOException e) {
-	    		System.err.println(e);
+		    	System.out.println("Ignore IOException");
 		    }
+			finally{
+		        try {
+					outputToServer.close();
+			        inputFromServer.close();
+			        socket.close();
+			        System.out.println("Stopped Listening");
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		private void processMessageClient(Data data){
+			switch (data.getType()){
+				case 0:
+					
+					break;
+			
+				case 1:
+					
+					break;
+				case 2:
+	        		userID = data.gettoID();
+	        		chatArea.append("Your ID is: "+userID+"\n");
+					break;
+				case 3:
+					
+					break;
+				case 4:
+	        		//chatArea.append(data.getMessage());
+					chatArea.append(data.getfromID()+" is online.\n");
+					chatArea.append("userList Size: "+data.getUserList().size()+"\n");
+					for(User u : data.getUserList()){
+						chatArea.append("userList contains: "+u.getUserID()+"\n");
+					}
+
+					break;
+				case 5:
+					chatArea.append(data.getMessage());
+					break;
+				default:
+						
+					break;
+			}
+		}
+		
+		private void updateUserListDisplay(LinkedList<User> list){
+			userNum=list.size();
+			numUserField.setText("("+userNum+")");
+			userListModel.removeAllElements();
+			userListModel.addElement("All");
+			//Add elements in 
+			for(User a : list) {
+				userListModel.addElement(a.getUserName());
+			}
 		}
 	}
+	
 }

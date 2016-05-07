@@ -10,6 +10,7 @@ public class User implements java.io.Serializable{
 	private transient ObjectOutputStream outputToClient;
 	
 	public User(String name, int id, Socket cSocket, ObjectOutputStream os){
+	
 		this.userName = name;
 		this.userID = id;
 		this.clientSocket = cSocket;
@@ -35,4 +36,5 @@ public class User implements java.io.Serializable{
 	public ObjectOutputStream getOutputStream(){
 		return this.outputToClient;
 	}
+	
 }
