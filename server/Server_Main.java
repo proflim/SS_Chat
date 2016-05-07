@@ -39,13 +39,14 @@ public class Server_Main extends JFrame implements ActionListener{
 	private JScrollPane Pane_UserListBox = new JScrollPane();
 	private JTextArea chatArea = new JTextArea();
 	private JScrollPane Pane_ChatArea;
-	private JTextField receiverField;	
+	private JTextField receiverField = new JTextField();	
 	private JTextArea messageArea = new JTextArea();
 	private JButton sendButton = new JButton("Send"); 
 	private JToggleButton serviceButton = new JToggleButton("Start Service");
 	
 	private static int portNum;  
 	private ServerSocket serverSocket;
+
 	private static int userNum;
 	private static int counterID=1;
 	private static final LinkedList<User> userList= new LinkedList<User>();
@@ -115,7 +116,6 @@ public class Server_Main extends JFrame implements ActionListener{
 		
 		Panel_Function_Top.add(new JLabel("  Send To:    "));
 		
-		receiverField = new JTextField();	//Need to get the selected value of online users
 		receiverField.setOpaque(false);
 		Panel_Function_Top.add(receiverField);
 		Panel_Function_Top.add(Box.createRigidArea(new Dimension(387,10)));
@@ -161,16 +161,26 @@ public class Server_Main extends JFrame implements ActionListener{
 	        else{
 	        	serviceButton.setText("Start Service");
 	        	
-	        	//End Server
 	        	//End connection with all thread (online users)
+	        	//Send Terminating Signal
         		try {
-					serverSocket.close();
+					Data d = new Data(3);
+					for(User u: userList){
+						u.getOutputStream().writeObject(d);
+					}
 				} catch (IOException e1) {
 					// TODO Auto-generated catch block
+					System.err.println("Exception when sending terminating signal to clients.");
 					e1.printStackTrace();
 				}
 	        	finally{
-	        		//socket.close();	
+	        		try {
+	        			userList.clear();
+						serverSocket.close();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}	
 	        	}
 	        }
 		}
@@ -234,33 +244,16 @@ public class Server_Main extends JFrame implements ActionListener{
 		});
 		
 		
-		JMenu Services = (JMenu) menuBar.add(new JMenu("Services"));
-		Services.setMnemonic('S');
+		JMenu Config = (JMenu) menuBar.add(new JMenu("Config"));
+		Config.setMnemonic('C');
 
-		mi = (JMenuItem) Services.add(new JMenuItem("Port Config"));	
+		mi = (JMenuItem) Config.add(new JMenuItem("Port Config"));	
 		mi.setMnemonic('P');
 		mi.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				PortConfig portconfig = new PortConfig();
+				PortConfig portconfig = new PortConfig(chatArea);
 			}
 		});
-		
-		mi = (JMenuItem) Services.add(new JMenuItem("Start Service"));	
-		mi.setMnemonic('S');
-		mi.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-
-			}
-		});
-		
-		mi = (JMenuItem) Services.add(new JMenuItem("End Service"));	
-		mi.setMnemonic('E');
-		mi.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-
-			}
-		});
-		
 
 		JMenu Help = (JMenu) menuBar.add(new JMenu("Help"));
 		Help.setMnemonic('H');
@@ -328,12 +321,31 @@ public class Server_Main extends JFrame implements ActionListener{
 				}
 				
 			} catch (IOException e) {
-				// TODO Close Connection Gracefully. 
 				//e.printStackTrace();
-				//Close input/output streams, close socket.
+			}
+			finally {
 				chatArea.append("Server ended at "+ new Date() + "\n");
 				disableGUI();
 				resetUserListDisplay();
+				try {
+					Data d = new Data(3);
+					for(User u: userList){
+						u.getOutputStream().writeObject(d);
+					}
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					System.err.println("Exception when sending terminating signal to clients.");
+					e1.printStackTrace();
+				}
+				finally{
+	        		try {
+	        			
+						serverSocket.close();
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}	
+				}
 			}
 		}
 
@@ -432,46 +444,50 @@ public class Server_Main extends JFrame implements ActionListener{
 	    		System.err.println(e);
 			}
 		    catch(IOException e) {
-		    	e.printStackTrace();
-		    	System.err.println("Error here");
-	    		System.err.println(e);
+		    	//e.printStackTrace();
+		    	//System.err.println("Error: Client interrupted suddenly");
+		    	//chatArea.append("Error: User "+userName+"["+userID+"] has lost connection.");
+		    	//System.err.println(e);
 		    }
 			finally{
-				if(counter>0){
-	        		String s = "User "+userName+"["+userID+"] has disconnected.\n";
-					chatArea.append(s);
-					int index=-1;
-	        		for(int i = 0; i<userList.size();i++){
-	        			if(userList.get(i).getUserID()==userID){
-	        				index =i;
-	        			}
-	        		}
-	        		userList.remove(index);
-	        		chatArea.append("Deleted userID: "+userID+"\n");
-	        		
-	        		chatArea.append("userList size: "+userList.size()+"\n");
-	        		for(User u: userList){
-		        		Data d = new Data(5, userName,userID, s, userList);
-		        		try {
-							u.getOutputStream().writeObject(d);
-							u.getOutputStream().flush();
+				if(!serverSocket.isClosed()){
+					//if(counter>0){
+		        		String s = "User "+userName+"["+userID+"] has disconnected.\n";
+						chatArea.append(s);
+						int index=-1;
+		        		for(int i = 0; i<userList.size();i++){
+		        			if(userList.get(i).getUserID()==userID){
+		        				index =i;
+		        			}
+		        		}
+		        		userList.remove(index);
+		        		chatArea.append("Deleted userID: "+userID+"\n");
+		        		
+		        		chatArea.append("userList size: "+userList.size()+"\n");
+		        		for(User u: userList){
+			        		Data d = new Data(5, userName,userID, s, userList);
+			        		try {
+								u.getOutputStream().writeObject(d);
+								u.getOutputStream().flush();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+		        		}
+						
+						updateUserListDisplay();
+						
+						try {
+							inputFromClient.close();
+							outputToClient.close();
+							socket.close();
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
 						}
-	        		}
-					
-					updateUserListDisplay();
-
-					try {
-						inputFromClient.close();
-						outputToClient.close();
-						socket.close();
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					counter--;
+						
+						counter--;
+					//}
 				}
 			}
 		}
@@ -480,11 +496,28 @@ public class Server_Main extends JFrame implements ActionListener{
 	
 	private void processMessageServer(Data data){
 		switch (data.getType()){
-			case 0:
+			case 0: //normal communication
+				//display message
+				displayMessage(data.getfromName(),data.getfromID(),data.gettoNameIDString(),data.getMessage());
 				
+				try{
+					if(data.gettoIndex()==0){//send to All
+						for(User u: userList){
+							u.getOutputStream().writeObject(data);
+						}
+					}
+					else{//sent to specific Client
+						userList.get(data.gettoIndex()-1).getOutputStream().writeObject(data);
+					}
+				}
+				catch(IOException e){
+					e.printStackTrace();
+					chatArea.append("Unsuccessfully sent to client.\n");
+				}
+				chatArea.append("Successfully sent to client.\n");
 				break;
 		
-			case 1:
+			case 1://update username
 				
 				break;
 			case 2:
@@ -518,11 +551,30 @@ public class Server_Main extends JFrame implements ActionListener{
 			userListModel.addElement(a.getUserName()+"["+a.getUserID()+"]");
 		}
 	}
+	/**
+	 * resets UserListDisplay (when the server ends / client logs out)
+	 */
 	private void resetUserListDisplay(){
 		userNum=0;
 		numUserField.setText("("+userNum+")");
 		userListModel.removeAllElements();
 		userListModel.addElement("All");
+	}
+	/**
+	 * Displays message to chatArea
+	 * 
+	 * @param fromName
+	 * @param fromID
+	 * @param toNameIDString
+	 * @param msg
+	 */
+	private void displayMessage(String fromName, int fromID, String toNameIDString, String msg){
+		chatArea.append(fromName+"["+fromID+"]"+"  >>  "+toNameIDString+": ");
+		chatArea.append(msg+"\n");
+	}
+	
+	void displayInfoinMain(String text){
+		chatArea.append(text+"\n");
 	}
 
 

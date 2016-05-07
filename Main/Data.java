@@ -6,32 +6,31 @@ public class Data implements java.io.Serializable {
 
 	  /*
 	   * Type
-	   * 0: normal communication
+	   * 0: normal communication (client -> server, server-> client)
 	   * 1: update username (client -> server)
 	   * 2: assign unique userID (server -> client)
-	   * 3: terminate connection
+	   * 3: terminate connection (separately handled)
 	   * 4: announce new user (server -> client) 
 	   * 5: announce disconnection (server -> client)
 	   */
 	
 	  private int type=-1;
 	  private String fromName="null";
-	  private String toName="null";
+	  private String toNameIDString="null";
 	  private int fromID=-1;
-	  private int toID=-1;	  
+	  private int toIndex=-1;	  
 	  private String message="void";
 	  private LinkedList<User> userList=null;
 
 	  //Basic constructor
 	  //Basic Communication (Client -> Server -> Client)
-	  public Data(int t, String fname, String tname, int fid, int tid, String msg, LinkedList<User> list) {
+	  public Data(int t, String fname, String tnameidstr, int fid, int tidx, String msg) {
 		  this.type = t;
 		  this.fromName = fname;
-		  this.toName = tname;
+		  this.toNameIDString = tnameidstr;
 		  this.fromID = fid;
-		  this.toID = tid;
-		  this.message = msg;
-		  this.userList = list;
+		  this.toIndex = tidx;
+		  this.message = msg;		  
 	  }
 	  
 	  //Notify/Update Username (Client -> Server)
@@ -41,9 +40,9 @@ public class Data implements java.io.Serializable {
 	  }
 	  
 	  //Assign uniqueID (Server -> Client)
-	  public Data(int t, int tid, LinkedList<User> list){
+	  public Data(int t, int fid, LinkedList<User> list){
 		  this.type = t;
-		  this.toID = tid;
+		  this.fromID = fid;
 		  this.userList = list;
 	  }
 	  
@@ -70,16 +69,16 @@ public class Data implements java.io.Serializable {
 		  return this.fromName;
 	  }
 	  
-	  public String gettoName(){
-		  return this.toName;
+	  public String gettoNameIDString(){
+		  return this.toNameIDString;
 	  }
 
 	  public int getfromID(){
 		  return this.fromID;
 	  }
 		
-	  public int gettoID(){
-		  return this.toID;
+	  public int gettoIndex(){
+		  return this.toIndex;
 	  }
 	  
 	  public String getMessage(){

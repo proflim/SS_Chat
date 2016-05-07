@@ -3,6 +3,10 @@ package client;
 import server.About;
 
 
+
+
+
+
 import java.io.*;
 import java.net.*;
 import java.util.Date;
@@ -13,6 +17,8 @@ import java.awt.event.*;
 
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 
 import Main.Data;
 import Main.LoginDialog;
@@ -57,6 +63,8 @@ public class Client_Main extends JFrame implements ActionListener {
 	private int userID;
 	private static int userNum;
 	private boolean isConnected;
+	private int selectedIndex;
+	private String selectedUser;
 	
 	public static void main(String[] args) {
 		new Client_Main();
@@ -79,9 +87,9 @@ public class Client_Main extends JFrame implements ActionListener {
 		setJMenuBar(createMenuBar());
 
 		//Initialize value
-		portNum = 8888;
-		ipAddress = "127.0.0.1";
-		userName = "hkuster";	//set default userName
+		portNum = 8888;				//set default port
+		ipAddress = "127.0.0.1";	//set default ipaddress
+		userName = "hkuster";		//set default userName
 		isConnected=false;
 		
 		//OnlineUserList Panel
@@ -96,11 +104,26 @@ public class Client_Main extends JFrame implements ActionListener {
 		Panel_OnlineUserList_Top.add(numUserField);
 		Panel_OnlineUserList.add(Panel_OnlineUserList_Top, BorderLayout.NORTH);
 		
-		//Dummy data//
+		//Default List (Contains only 'All' element, and no user)//
 		userListModel.addElement("All");
 
 		
 		userListBox = new JList(userListModel);
+		
+		/* Listenener for the userListBox
+		 * If certain element is selected, sets the receiverField to that value.
+		 * Updates String selectedUser, int selectedIndex: for later sending message.
+		 */
+		userListBox.addListSelectionListener(new ListSelectionListener(){
+			public void  valueChanged(ListSelectionEvent s){
+				int index =((JList)s.getSource()).getSelectedIndex();
+				selectedUser = (String) ((JList)s.getSource()).getSelectedValue();
+				//System.out.println("Index: "+index);
+				//System.out.println("userString: "+userString);
+				receiverField.setText(selectedUser);
+				selectedIndex=index;
+			}
+		});
 		Pane_UserListBox = new JScrollPane(userListBox);
 		Panel_OnlineUserList.add(Pane_UserListBox,BorderLayout.CENTER);
 		
@@ -122,7 +145,6 @@ public class Client_Main extends JFrame implements ActionListener {
 		Panel_Function_Center.setLayout(new FlowLayout(FlowLayout.LEADING));
 		
 		Panel_Function_Top.add(new JLabel("  Send To:    "));
-		receiverField = new JTextField();
 		receiverField.setOpaque(false);
 		Panel_Function_Top.add(receiverField);
 		Panel_Function_Top.add(Box.createRigidArea(new Dimension(387,10)));
@@ -148,7 +170,6 @@ public class Client_Main extends JFrame implements ActionListener {
 		
 		//disable certain GUI features, since the client has not connected yet.
 		disableGUI();
-
 
 		
 		setVisible(true);
@@ -186,6 +207,27 @@ public class Client_Main extends JFrame implements ActionListener {
 	        	}
 	        }
 		}
+		else if(e.getSource() == sendButton){
+			
+			String msg = messageArea.getText();
+			//display message
+			if(selectedIndex!=0)
+				displayMessage(userName,userID,selectedUser,msg);
+			//chatArea.append(userName+"["+userID+"]"+"  >>  "+selectedUser+": ");
+			//chatArea.append(msg+"\n");
+			
+			//selectedIndex, selectedUser
+			//send message to server
+			try {
+				Data d = new Data(0,userName,selectedUser,userID, selectedIndex, msg);
+				outputToServer.writeObject(d);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+			chatArea.append("Successfully sent to server.\n");
+			
+		}
+
 		
 	}
 	
@@ -359,14 +401,18 @@ public class Client_Main extends JFrame implements ActionListener {
 	    		e.printStackTrace();
 			}
       		catch (IOException ex) {
-		    	System.out.println("Ignore IOException");
+				//e.printStackTrace();
       	    }
         	finally{
 		        try {
 					outputToServer.close();
 			        inputFromServer.close();
 			        socket.close();
-			        System.out.println("Stopped Listening");
+			        chatArea.append("Disconnected from server at "+new Date()+"\n");
+			        if(connectButton.isSelected()){
+			        	connectButton.setSelected(false);
+			        	connectButton.setText("Connect");
+			        }
 			        disableGUI();
 			        resetUserListDisplay();
 				} catch (IOException e) {
@@ -376,22 +422,25 @@ public class Client_Main extends JFrame implements ActionListener {
 		}
 		private void processMessageClient(Data data){
 			switch (data.getType()){
-				case 0:
-					
+				case 0://normal communication
+					displayMessage(data.getfromName(),data.getfromID(),data.gettoNameIDString(),data.getMessage());
 					break;
 			
-				case 1:
+				case 1://change username
 					
 					break;
 				case 2:	//get ID, receive current UserList
-	        		userID = data.gettoID();
+	        		userID = data.getfromID();
+	        		chatArea.append("Welcome to SSChat!\n");
+	        		chatArea.append("Your username is: "+userName+"\n");
 	        		chatArea.append("Your ID is: ["+userID+"]\n");
 	        		uList = data.getUserList();
 	        		updateUserListDisplay(uList);
 
 					break;
-				case 3:
-					
+				case 3://terminate connection
+					isConnected=false;
+					chatArea.append("Received Terminating signal from Server.\n");
 					break;
 				case 4: //receive new connected user info
 					chatArea.append(data.getfromName()+"["+data.getfromID()+"] is online.\n");
@@ -412,7 +461,7 @@ public class Client_Main extends JFrame implements ActionListener {
 	        		updateUserListDisplay(uList);
 					break;
 				default:
-						
+					chatArea.append("Something unexpected has happened. Please Reboot.\n");	
 					break;
 			}
 		}
@@ -427,12 +476,28 @@ public class Client_Main extends JFrame implements ActionListener {
 				userListModel.addElement(a.getUserName()+"["+a.getUserID()+"]");
 			}
 		}
+		/**
+		 * resets UserListDisplay (when the server ends / client logs out)
+		 */
 		private void resetUserListDisplay(){
 			userNum=0;
 			numUserField.setText("("+userNum+")");
 			userListModel.removeAllElements();
 			userListModel.addElement("All");
 		}
+	}
+	
+	/**
+	 * Displays message to chatArea
+	 * 
+	 * @param fromName
+	 * @param fromID
+	 * @param toNameIDString
+	 * @param msg
+	 */
+	private void displayMessage(String fromName, int fromID, String toNameIDString, String msg){
+		chatArea.append(fromName+"["+fromID+"]"+"  >>  "+toNameIDString+": ");
+		chatArea.append(msg+"\n");
 	}
 	
 }

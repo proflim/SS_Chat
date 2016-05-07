@@ -9,7 +9,9 @@ import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
 import server.Server_Main;
@@ -19,8 +21,10 @@ public class PortConfig extends JDialog implements ActionListener{
 	JPanel Panel_Main = new JPanel();
 	JTextField PortNumField;
 	JButton doneButton = new JButton("Done");
-	
-	public PortConfig(){
+	JTextArea jta;
+	public PortConfig(JTextArea jta){
+		this.jta = jta;
+		
 		setTitle("Port Configuration");
 		setSize(300,80);
 		setLocation(500,200);
@@ -45,11 +49,13 @@ public class PortConfig extends JDialog implements ActionListener{
 			if(checkValidNum(PortNumField.getText())){
 				int num = Integer.parseInt(PortNumField.getText());
 				Server_Main.setPortNum(num);
-				System.out.println("Server Port changed to: "+Server_Main.getPortNum());
+				jta.append("Server Port changed to: "+Server_Main.getPortNum()+"\n");
+				dispose();
 			}
 			else{
-				//TODO: Output error message and prompt to input again. (Maybe use while loop)
-				
+				//TODO: Output error message and prompt to input again.
+				JOptionPane.showMessageDialog(this, "Input Error",
+						"Input correct Port", JOptionPane.ERROR_MESSAGE);
 			}
 		}
 		
